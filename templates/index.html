@@ -91,6 +91,14 @@
     .dot.error   { background: #f85149; animation: none; }
     .dot.ok      { background: #3fb950; }
 
+    /* Warning marker shown next to the Notify dropdown when the browser or OS
+       will not actually deliver notifications (see checkNotifyHealth). */
+    .notify-warn {
+      color: #d29922;
+      cursor: help;
+      margin-left: 2px;
+    }
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.3; }
@@ -509,6 +517,7 @@
           <option value="overhead">Overhead only</option>
           <option value="both" selected>Both</option>
         </select>
+        <span id="notify-warn" class="notify-warn" hidden></span>
       </label>
       <label>Overhead alert
         <select id="auto-dismiss" onchange="onAutoDismissChange(this.value)" title="Automatically dismiss the full-screen overhead alert after a set time">
@@ -1053,17 +1062,57 @@
 
     // ── Browser notifications ──
     // Modes: 'off' (default), 'new' (every new flight), 'overhead' (only overhead), 'both'.
+    //
+    // Delivery can fail at three independent layers, and only the first two are
+    // visible to JS: the page origin (notifications need a secure context), the
+    // browser permission, and the OS itself — macOS will silently swallow a
+    // notification that Chrome happily accepted if the browser is not allowed to
+    // post notifications, or a Focus mode is on. The ⚠ marker next to the Notify
+    // dropdown reports whichever layer is blocking, so the dropdown never claims
+    // to be armed while nothing can actually fire.
+
+    let notifyShowSeen = false;   // has the OS ever confirmed displaying one?
+
+    // Show (or clear, when passed null) the warning marker beside the dropdown.
+    function setNotifyWarn(msg) {
+      const el = document.getElementById('notify-warn');
+      if (!msg) { el.hidden = true; el.textContent = ''; el.title = ''; return; }
+      el.hidden = false;
+      el.textContent = '⚠';
+      el.title = msg;
+    }
+
+    // Why notifications cannot be delivered right now, or null if they can be.
+    function notifyBlockReason() {
+      if (!window.isSecureContext) {
+        return 'Notifications need a secure context — open the dashboard on '
+             + 'http://localhost:5050 or over https://, not a LAN IP.';
+      }
+      if (!('Notification' in window)) return 'This browser does not support notifications.';
+      if (Notification.permission === 'denied') {
+        return 'Notification permission is blocked — allow it in the site settings.';
+      }
+      if (Notification.permission === 'default') {
+        return 'Notification permission was never granted — pick a Notify mode to ask again.';
+      }
+      return null;
+    }
+
     function onNotifyChange(value) {
-      if (value === 'off') { notifyMode = 'off'; return; }
-      if (!('Notification' in window)) {
-        setStatus('error', 'Notifications not supported by this browser');
-        document.getElementById('notify').value = 'off';
+      const sel = document.getElementById('notify');
+      if (value === 'off') { notifyMode = 'off'; setNotifyWarn(null); return; }
+      if (!window.isSecureContext || !('Notification' in window)) {
+        const reason = notifyBlockReason();
+        setNotifyWarn(reason);
+        setStatus('error', reason);
+        sel.value = 'off';
         notifyMode = 'off';
         return;
       }
       Notification.requestPermission().then((perm) => {
         if (perm === 'granted') {
           notifyMode = value;
+          setNotifyWarn(null);
           const msg = {
             new: 'You\u2019ll be alerted when new flights appear nearby.',
             overhead: 'You\u2019ll be alerted when a plane is overhead.',
@@ -1071,19 +1120,43 @@
           }[value];
           sendNotification('OpenFlightWall', msg);
         } else {
-          setStatus('error', 'Notification permission denied — enable it in the browser');
-          document.getElementById('notify').value = 'off';
+          // Either 'denied', or still 'default' because Chrome showed its quiet
+          // prompt (a bell icon in the address bar) instead of a modal.
+          const reason = notifyBlockReason();
+          setNotifyWarn(reason);
+          setStatus('error', reason);
+          sel.value = 'off';
           notifyMode = 'off';
         }
-      });
+      }).catch(() => {});
     }
 
     function sendNotification(title, body, icon) {
       if (notifyMode === 'off') return;
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const reason = notifyBlockReason();
+      if (reason) { setNotifyWarn(reason); return; }
+      let n;
       try {
-        new Notification(title, { body, icon: icon || undefined, badge: icon || undefined });
-      } catch (e) { /* ignore */ }
+        n = new Notification(title, { body, icon: icon || undefined, badge: icon || undefined });
+      } catch (e) {
+        // Chrome on Android throws here — it only allows notifications posted
+        // through a service worker registration, which this page does not use.
+        setNotifyWarn(`This browser refused to create the notification (${e.name}).`);
+        return;
+      }
+      n.onshow = () => { notifyShowSeen = true; setNotifyWarn(null); };
+      n.onerror = () => setNotifyWarn('The browser could not display the notification.');
+      // If the OS never acknowledges the very first one, it is being swallowed
+      // above the browser — the usual cause on macOS is the browser itself not
+      // being allowed to post notifications.
+      if (!notifyShowSeen) {
+        setTimeout(() => {
+          if (notifyShowSeen) return;
+          setNotifyWarn('Sent, but your OS never displayed it — check System Settings → '
+            + 'Notifications → your browser (alert style must not be \u201cNone\u201d), '
+            + 'and turn off any Focus / Do Not Disturb mode.');
+        }, 4000);
+      }
     }
 
     // Build a short label for a flight (airline / callsign + route).
@@ -1269,22 +1342,31 @@
     }
 
     // Sync the notify dropdown with the default mode and request permission.
-    // If notifications are unsupported or blocked, fall back to 'off'.
+    // If notifications are unsupported or blocked, fall back to 'off' and explain
+    // why via the ⚠ marker — anything short of a grant means nothing will fire.
     function initNotify() {
       const sel = document.getElementById('notify');
       sel.value = notifyMode;
+      setNotifyWarn(null);
       if (notifyMode === 'off') return;
-      if (!('Notification' in window) || Notification.permission === 'denied') {
+      if (!window.isSecureContext || !('Notification' in window)
+          || Notification.permission === 'denied') {
+        setNotifyWarn(notifyBlockReason());
         notifyMode = 'off';
         sel.value = 'off';
         return;
       }
       if (Notification.permission === 'default') {
-        // Best-effort prompt on load (some browsers require a user gesture and
-        // will simply defer — notifications then start once permission is granted).
+        // Best-effort prompt on load. Chrome may answer with its quiet prompt and
+        // leave the permission at 'default', so treat anything but an explicit
+        // grant as a fall back to 'off' rather than assuming it worked.
         try {
           Notification.requestPermission().then((perm) => {
-            if (perm === 'denied') { notifyMode = 'off'; sel.value = 'off'; }
+            if (perm !== 'granted') {
+              notifyMode = 'off';
+              sel.value = 'off';
+              setNotifyWarn(notifyBlockReason());
+            }
           }).catch(() => {});
         } catch (e) { /* ignore */ }
       }

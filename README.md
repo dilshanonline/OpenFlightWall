@@ -2,6 +2,8 @@
 
 A zero-cost local web dashboard that shows nearby flights in real time. Runs on your machine via a Python/Flask server — no paid subscriptions required.
 
+**[Live demo](https://openflightwall.onrender.com/)** — hosted free on Render. _(Occasionally shows a `500` fetching flights — see the [known limitation](#deploy-to-render-free-tier) below.)_
+
 **Card View:**
 ![Card View](docs/screenshots/card-view.png)
 
@@ -255,10 +257,13 @@ docker run -p 5050:5050 \
 
 ### Deploy to Render (free tier)
 
-1. Render dashboard → **New → Web Service → Deploy an existing image**.
-2. Image URL: `docker.io/dilshanonline/openflightwall:latest`.
+The [live demo](https://openflightwall.onrender.com/) above is running exactly this setup:
+
+1. Render dashboard → **New → Web Service** → connect the `OpenFlightWall` GitHub repo → Render auto-detects the `Dockerfile` and builds it directly (redeploys on every push to `main`).
+2. Alternatively, skip the build step entirely: **New → Web Service → Deploy an existing image** → `docker.io/dilshanonline/openflightwall:latest` (the same image published by CI on every tagged release).
 3. Render injects `PORT` automatically — no config needed, gunicorn already binds to it.
 4. Optionally add `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` as environment variables in the Render dashboard for a higher rate limit.
+5. **Known limitation:** OpenSky Network sometimes blocks or throttles anonymous requests from cloud/datacenter IP ranges (Render, AWS, GCP, Heroku, etc.) — this can surface as a `500` from `/api/flights`. It's an upstream restriction, not an app bug. Adding `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` (step 4 above) is more likely to succeed than anonymous access from a datacenter IP. This is open source — PRs improving on this are welcome.
 
 ---
 

@@ -114,6 +114,7 @@ Other backend facts:
 - `.github/workflows/docker-publish.yml` builds and pushes multi-arch (`linux/amd64`+`linux/arm64`) images to Docker Hub (`dilshanonline/openflightwall`) on `v*.*.*` git tags only — pushing to `main` does **not** trigger a build.
 - Local test build: `docker buildx build --load -t openflightwall:test .` then `docker run -p 5050:5050 openflightwall:test`.
 - If you add a new Python dependency needed at runtime, add it to `dependencies` (or the `server` extra in `[project.optional-dependencies]` if Docker-only) in `pyproject.toml`, then run `uv lock` to update `uv.lock` — the Docker build uses `uv sync --frozen`, so a stale lockfile will fail the build.
+- Live demo deployed on Render (free tier): https://openflightwall.onrender.com/ — built directly from this repo's `Dockerfile`, redeploys on push to `main`. **Known issue**: OpenSky Network sometimes blocks/throttles anonymous requests from cloud/datacenter IPs (Render, AWS, GCP, Heroku, etc.), which can surface as a `500` from `/api/flights` there — it's an upstream restriction (already caught and reported cleanly by the `except Exception` handler around `fetch_flights()` in `app.py`, not an app bug). Don't "fix" this by suppressing the error; a real fix would involve auth-first requests or a fallback data source.
 
 ## Running / Testing
 

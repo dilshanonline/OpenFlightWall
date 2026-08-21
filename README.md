@@ -234,6 +234,13 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 - If you clicked *Block*, re-allow location via the 🔒/ⓘ icon in the address bar
 - Use `http://localhost:5050` (not a LAN IP) — geolocation needs a secure context
 
+**Browser notifications not appearing**
+- A ⚠ next to the **Notify** dropdown names whichever layer is blocking — hover it
+- macOS: System Settings → **Notifications** → your browser must have *Allow Notifications* on and an alert style other than **None**; also turn off any **Focus / Do Not Disturb** mode
+- The browser can report success while the OS silently drops the banner — that is what the ⚠ detects
+- Re-allow notifications via the 🔒/ⓘ icon in the address bar if you previously blocked them
+- Use `http://localhost:5050` (not a LAN IP) — notifications need a secure context, same as geolocation
+
 **Server error on startup**
 - Ensure the uv environment is installed and current: `uv sync`
 

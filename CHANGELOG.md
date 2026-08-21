@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-22
+
+### Fixed
+- Browser notifications could silently never fire while the header dropdown still read "Both". `initNotify()` only fell back to `off` on an explicit `denied`, so when Chrome answered with its quiet permission prompt — leaving the permission at `default` — the app stayed in `both` mode and every notification was dropped with no indication.
+- `sendNotification()` swallowed every failure (an empty `catch`, plus a bare return when permission was not granted), so nothing surfaced when a notification could not be delivered.
+
+### Added
+- Notification delivery diagnostics: a ⚠ marker beside the **Notify** dropdown names whichever layer is blocking — insecure origin, browser permission, or the OS. `sendNotification()` watches `onshow`/`onerror` and, if the OS never acknowledges the first notification within 4s, points at System Settings → Notifications. This catches the case where the browser reports success but macOS silently drops the banner.
+- README troubleshooting section for notifications that never appear.
+
 ## [1.0.1] - 2026-08-21
 
 ### Changed

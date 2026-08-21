@@ -15,7 +15,7 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 **Map view:**
 ![Map view](docs/screenshots/map-view.png)
 
-**Keyless by default:** every data source works with no API key or account. The only optional setup is a **free** OpenSky account, which raises the flight-position rate limit (see [Configuration](#configuration)). Nothing here ever costs money.
+**Keyless by default:** every data source works with no API key or account. The only optional setup is a **free** OpenSky account, which raises the flight-position rate limit (see [Configuration](#configuration)). Nothing here ever costs money, and if you do add credentials, they **never leave your machine** — everything runs locally, with no telemetry and no third-party server in between.
 
 ## Features
 

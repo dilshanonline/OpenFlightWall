@@ -1,0 +1,15 @@
+.git/
+.github/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+opensky_creds.json
+docs/
+README.md
+AGENTS.md
+LICENSE
+NOTICE
+Dockerfile
+.dockerignore

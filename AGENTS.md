@@ -104,6 +104,16 @@ Other backend facts:
 3. Keep the cache mechanisms intact when modifying `fetch_flights()` or `get_route()`.
 4. For frontend changes, keep everything in `index.html` — no build step, no npm (Leaflet is loaded from CDN).
 5. Test by running `uv run python app.py` and hitting `/api/flights?lat=..&lon=..&radius=..`.
+6. **Update `CHANGELOG.md`** for any user-facing change — add an entry under `## [Unreleased]` (create the section if it's missing), using the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categories (Added/Changed/Fixed/Removed/Security). When a release is tagged, `[Unreleased]` gets renamed to the new version + date.
+
+## Docker
+
+- `Dockerfile` — multi-stage build (`python:3.12-slim`): a `builder` stage uses `uv sync --extra server` to install deps (incl. gunicorn) into `.venv`, then a `runtime` stage copies just `.venv` + `app.py` + `templates/` and runs as a non-root user.
+- The container's `CMD` runs **gunicorn** (`gunicorn --bind 0.0.0.0:${PORT} ... app:app`), importing the Flask `app` object directly — it never executes the `if __name__ == "__main__":` block, so local dev (`uv run python app.py`, Flask's own dev server) is completely separate and unaffected by Docker changes.
+- `PORT` env var controls the bind port (default `5000`) — required for platforms like Render that inject their own port.
+- `.github/workflows/docker-publish.yml` builds and pushes multi-arch (`linux/amd64`+`linux/arm64`) images to Docker Hub (`dilshanonline/openflightwall`) on `v*.*.*` git tags only — pushing to `main` does **not** trigger a build.
+- Local test build: `docker buildx build --load -t openflightwall:test .` then `docker run -p 5000:5000 openflightwall:test`.
+- If you add a new Python dependency needed at runtime, add it to `dependencies` (or the `server` extra in `[project.optional-dependencies]` if Docker-only) in `pyproject.toml`, then run `uv lock` to update `uv.lock` — the Docker build uses `uv sync --frozen`, so a stale lockfile will fail the build.
 
 ## Running / Testing
 

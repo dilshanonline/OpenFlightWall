@@ -237,6 +237,31 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 
 ---
 
+## Docker
+
+Prebuilt multi-arch images (`linux/amd64` + `linux/arm64`) are published to Docker Hub on every tagged release:
+
+```bash
+docker run -p 5000:5000 \
+  -e OPENSKY_CLIENT_ID=your-client-id \
+  -e OPENSKY_CLIENT_SECRET=your-client-secret \
+  dilshanonline/openflightwall:latest
+```
+
+- `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` are optional — omit them to run keyless.
+- The container listens on the `PORT` env var (default `5000`); set it if you need a different internal port, and adjust `-p` to match.
+- Tags: `latest` (newest release), plus semantic versions like `1.2.0`, `1.2`, `1` for pinning.
+- Runs behind [gunicorn](https://gunicorn.org/) in the image — the local `uv run python app.py` dev workflow above is unaffected and still uses Flask's own dev server.
+
+### Deploy to Render (free tier)
+
+1. Render dashboard → **New → Web Service → Deploy an existing image**.
+2. Image URL: `docker.io/dilshanonline/openflightwall:latest`.
+3. Render injects `PORT` automatically — no config needed, gunicorn already binds to it.
+4. Optionally add `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` as environment variables in the Render dashboard for a higher rate limit.
+
+---
+
 ## Contributing
 
 Contributions are welcome — bug fixes, new free/keyless data sources, UI improvements, docs for your favorite package manager, all of it. Open an issue or a PR. The one hard rule: this project stays zero-cost, so no paid APIs or required API keys (see [AGENTS.md](AGENTS.md) for the full constraints and an architecture overview if you're using an AI coding assistant).

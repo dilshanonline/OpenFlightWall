@@ -88,7 +88,7 @@ Prefer a different workflow, or want to add first-class docs/lockfile support fo
 
 **Open your browser**
 ```
-http://localhost:5000
+http://localhost:5050
 ```
 
 The browser will ask for permission to use your location. **Allow it** and the dashboard shows flights around you. If you deny (or geolocation is unavailable), a prompt lets you **enter your latitude/longitude manually** — or open the **Map** view and click anywhere to drop your location.
@@ -230,7 +230,7 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 - Or open the **Map** view and click anywhere to drop your location
 - macOS: enable **System Settings → Privacy & Security → Location Services** for your browser
 - If you clicked *Block*, re-allow location via the 🔒/ⓘ icon in the address bar
-- Use `http://localhost:5000` (not a LAN IP) — geolocation needs a secure context
+- Use `http://localhost:5050` (not a LAN IP) — geolocation needs a secure context
 
 **Server error on startup**
 - Ensure the uv environment is installed and current: `uv sync`
@@ -242,14 +242,14 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 Prebuilt multi-arch images (`linux/amd64` + `linux/arm64`) are published to Docker Hub on every tagged release:
 
 ```bash
-docker run -p 5000:5000 \
+docker run -p 5050:5050 \
   -e OPENSKY_CLIENT_ID=your-client-id \
   -e OPENSKY_CLIENT_SECRET=your-client-secret \
   dilshanonline/openflightwall:latest
 ```
 
 - `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` are optional — omit them to run keyless.
-- The container listens on the `PORT` env var (default `5000`); set it if you need a different internal port, and adjust `-p` to match.
+- The container listens on the `PORT` env var (default `5050`); set it if you need a different internal port, and adjust `-p` to match.
 - Tags: `latest` (newest release), plus semantic versions like `1.2.0`, `1.2`, `1` for pinning.
 - Runs behind [gunicorn](https://gunicorn.org/) in the image — the local `uv run python app.py` dev workflow above is unaffected and still uses Flask's own dev server.
 

@@ -110,17 +110,17 @@ Other backend facts:
 
 - `Dockerfile` — multi-stage build (`python:3.12-slim`): a `builder` stage uses `uv sync --extra server` to install deps (incl. gunicorn) into `.venv`, then a `runtime` stage copies just `.venv` + `app.py` + `templates/` and runs as a non-root user.
 - The container's `CMD` runs **gunicorn** (`gunicorn --bind 0.0.0.0:${PORT} ... app:app`), importing the Flask `app` object directly — it never executes the `if __name__ == "__main__":` block, so local dev (`uv run python app.py`, Flask's own dev server) is completely separate and unaffected by Docker changes.
-- `PORT` env var controls the bind port (default `5000`) — required for platforms like Render that inject their own port.
+- `PORT` env var controls the bind port (default `5050`) — required for platforms like Render that inject their own port.
 - `.github/workflows/docker-publish.yml` builds and pushes multi-arch (`linux/amd64`+`linux/arm64`) images to Docker Hub (`dilshanonline/openflightwall`) on `v*.*.*` git tags only — pushing to `main` does **not** trigger a build.
-- Local test build: `docker buildx build --load -t openflightwall:test .` then `docker run -p 5000:5000 openflightwall:test`.
+- Local test build: `docker buildx build --load -t openflightwall:test .` then `docker run -p 5050:5050 openflightwall:test`.
 - If you add a new Python dependency needed at runtime, add it to `dependencies` (or the `server` extra in `[project.optional-dependencies]` if Docker-only) in `pyproject.toml`, then run `uv lock` to update `uv.lock` — the Docker build uses `uv sync --frozen`, so a stale lockfile will fail the build.
 
 ## Running / Testing
 
 ```bash
 uv sync
-uv run python app.py                                        # starts on port 5000
-curl 'localhost:5000/api/flights?lat=51.47&lon=-0.45&radius=6'   # verify JSON array
+uv run python app.py                                        # starts on port 5050
+curl 'localhost:5050/api/flights?lat=51.47&lon=-0.45&radius=6'   # verify JSON array
 ```
 
 ## External API URLs

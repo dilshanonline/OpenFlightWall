@@ -1,7 +1,7 @@
 """
 OpenFlightWall — Local Web UI
 Flask server that fetches nearby flight data from free APIs and serves a web
-dashboard at http://localhost:5000.
+dashboard at http://localhost:5050.
 
 Data pipeline (zero-cost):
   1. OpenSky Network             — real-time ADS-B state vectors
@@ -593,4 +593,4 @@ def delete_config():
 if __name__ == "__main__":
     mode = "authenticated (OAuth)" if (_creds["client_id"] and _creds["client_secret"]) else "anonymous"
     print(f"OpenSky access: {mode}")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)

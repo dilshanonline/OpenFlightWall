@@ -37,11 +37,11 @@ COPY --chown=app:app app.py ./
 COPY --chown=app:app templates/ ./templates/
 
 ENV PATH="/app/.venv/bin:${PATH}" \
-    PORT=5000 \
+    PORT=5050 \
     PYTHONUNBUFFERED=1
 
 USER app
-EXPOSE 5000
+EXPOSE 5050
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/api/config', timeout=3)" || exit 1

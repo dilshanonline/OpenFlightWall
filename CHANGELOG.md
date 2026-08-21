@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-21
+
+### Changed
+- Default port moved from `5000` to `5050` (local dev and Docker/`PORT` default alike) — macOS's AirPlay Receiver squats on port 5000, which was intermittently hijacking the app's port after every dev-server reload.
+
 ## [1.0.0] - 2026-08-21
 
 ### Added

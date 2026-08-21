@@ -237,6 +237,12 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 
 ---
 
+## Contributing
+
+Contributions are welcome — bug fixes, new free/keyless data sources, UI improvements, docs for your favorite package manager, all of it. Open an issue or a PR. The one hard rule: this project stays zero-cost, so no paid APIs or required API keys (see [AGENTS.md](AGENTS.md) for the full constraints and an architecture overview if you're using an AI coding assistant).
+
+---
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).

@@ -1,0 +1,8 @@
+OpenFlightWall
+Copyright 2026 Dilshan Wijesooriya
+
+This product includes software originally developed as part of
+TheFlightWall (https://github.com/AxisNimble/TheFlightWall_OSS),
+licensed under the Apache License, Version 2.0. Portions of the
+geolocation utilities in app.py are ported from that project's
+firmware/utils/GeoUtils.h.

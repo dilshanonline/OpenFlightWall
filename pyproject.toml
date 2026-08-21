@@ -1,0 +1,11 @@
+[project]
+name = "openflightwall"
+version = "0.1.0"
+description = "Zero-cost flight-tracking dashboard in your browser — OpenFlightWall"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.0,<4",
+    "python-dotenv>=1.0,<2",
+    "requests>=2.31,<3",
+]

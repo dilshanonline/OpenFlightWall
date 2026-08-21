@@ -2,7 +2,18 @@
 
 A zero-cost local web dashboard that shows nearby flights in real time. Runs on your machine via a Python/Flask server — no paid subscriptions required.
 
-_Screenshot coming soon._
+**Card View:**
+![Card View](docs/screenshots/card-view.png)
+
+**Browser notification:**
+
+<img src="docs/screenshots/notification.png" width="500" alt="Browser notification">
+
+**Overhead notification:**
+![Overhead notification](docs/screenshots/overhead-alert.png)
+
+**Map view:**
+![Map view](docs/screenshots/map-view.png)
 
 **Keyless by default:** every data source works with no API key or account. The only optional setup is a **free** OpenSky account, which raises the flight-position rate limit (see [Configuration](#configuration)). Nothing here ever costs money.
 
@@ -37,7 +48,7 @@ _Screenshot coming soon._
 ## Prerequisites
 
 - Python **3.11+**
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- A way to install dependencies — [uv](https://docs.astral.sh/uv/getting-started/installation/) is used for development, but `pyproject.toml` is a plain, standard PEP 621 file with no tool lock-in. Use uv, pip, Poetry, Pipenv, Conda, or whatever you prefer.
 
 **Dependencies:** Flask 3.x, Requests 2.x, and python-dotenv 1.x.
 
@@ -63,6 +74,17 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install flask requests python-dotenv
 python app.py
 ```
+
+### Other tools (Poetry, Pipenv, Conda, etc.)
+
+There's nothing uv- or pip-specific about this project — `pyproject.toml` is a plain PEP 621 file, so any tool that reads one will work, e.g.:
+
+```bash
+poetry install
+poetry run python app.py
+```
+
+Prefer a different workflow, or want to add first-class docs/lockfile support for another tool? PRs are very welcome.
 
 **Open your browser**
 ```

@@ -25,7 +25,7 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 ## Features
 
-- **Card & Map views** — a responsive flight-card grid, or a live Leaflet/OpenStreetMap map with rotated plane icons.
+- **Card & Map views** — a responsive flight-card grid, or a live Leaflet/OpenStreetMap map with rotated plane icons; click anywhere on the map to move your location.
 - **Origin → destination routes** — full airport names + country flags, plus great-circle route arcs on the map.
 - **Flight progress + ETA** — progress bar with km flown / remaining and a rough "lands in ~1h 23m" estimate (computed locally).
 - **Aircraft photos & details** — photo, registration, manufacturer and owner from adsbdb.com.

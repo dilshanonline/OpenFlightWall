@@ -4,6 +4,10 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 **[Live demo](https://openflightwall.onrender.com/)** — hosted free on Render. _(Occasionally shows a `500` fetching flights — see the [known limitation](#deploy-to-render-free-tier) below.)_
 
+**[Read the story](https://medium.com/@dilshanw/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31)** — how this project came to be, on Medium.
+
+![OpenFlightWall Medium article cover](docs/screenshots/article-cover-1.png)
+
 **Card View:**
 ![Card View](docs/screenshots/card-view.png)
 
@@ -287,3 +291,5 @@ Apache License 2.0 — see [LICENSE](LICENSE).
 ## Credits
 
 Built by [Dilshan Wijesooriya](https://dilshanwijesooriya.me/) ([GitHub](https://github.com/dilshanonline)) — inspired by [TheFlightWall](https://github.com/AxisNimble/TheFlightWall_OSS).
+
+![OpenFlightWall Medium article cover, dashboard preview](docs/screenshots/article-cover-2.png)

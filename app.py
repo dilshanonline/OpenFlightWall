@@ -240,29 +240,17 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
     have_creds = bool(_creds["client_id"] and _creds["client_secret"])
 
     # Use the free anonymous bucket first to conserve account credits; only fall
-    # back to the authenticated (keyed) bucket if anonymous is rate-limited (429)
-    # or unreachable (some hosts, e.g. datacenter IPs, get connection-level
-    # blocks/timeouts from OpenSky rather than a clean 429).
-    resp = None
-    anon_error = None
-    try:
-        resp = requests.get(url, timeout=15)
-        _record_rate("anonymous", resp)
-    except requests.exceptions.RequestException as exc:
-        anon_error = exc
+    # back to the authenticated (keyed) bucket if anonymous is rate-limited (429).
+    resp = requests.get(url, timeout=15)
+    _record_rate("anonymous", resp)
     mode = "anonymous"
-
-    if (resp is None or resp.status_code == 429) and have_creds:
+    if resp.status_code == 429 and have_creds:
         token = _opensky_token_get()
         if token:
             resp = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=15)
             _record_rate("authenticated", resp)
             mode = "authenticated"
-            anon_error = None
     _opensky_rate["last_mode"] = mode
-
-    if resp is None:
-        raise anon_error
 
     if resp.status_code == 429:
         raise OpenSkyRateLimit(

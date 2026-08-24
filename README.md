@@ -46,6 +46,7 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 > | | |
 > |---|---|
 > | **OpenSky rate limit** | Works keyless, but the anonymous limit is very low (you'll hit `429` quickly). A **free** OpenSky account raises it a lot — see [Configuration](#configuration). A 30 s server cache also helps. |
+> | **OpenSky blocks some cloud IPs entirely** | On some hosts (confirmed on Render), *all* connections to OpenSky — anonymous **and** authenticated — fail with a connection timeout, not a `429`. Credentials don't help in this case; see [Deploy to Render](#deploy-to-render-free-tier). |
 > | **Community data sources** | hexdb.io (aircraft type) and adsbdb.com (routes) are community-run with no SLA — some flights may show "Unknown aircraft" or "Route unavailable". |
 > | **On-ground aircraft included** | All transponders within radius are returned, including parked aircraft (use the *Hide ground* toggle). |
 
@@ -274,7 +275,7 @@ The [live demo](https://openflightwall.onrender.com/) above is running exactly t
 2. Alternatively, skip the build step entirely: **New → Web Service → Deploy an existing image** → `docker.io/dilshanonline/openflightwall:latest` (the same image published by CI on every tagged release).
 3. Render injects `PORT` automatically — no config needed, gunicorn already binds to it.
 4. Optionally add `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` as environment variables in the Render dashboard for a higher rate limit.
-5. **Known limitation:** OpenSky Network sometimes blocks or throttles anonymous requests from cloud/datacenter IP ranges (Render, AWS, GCP, Heroku, etc.) — this can surface as a `500` from `/api/flights`. It's an upstream restriction, not an app bug. Adding `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` (step 4 above) is more likely to succeed than anonymous access from a datacenter IP. This is open source — PRs improving on this are welcome.
+5. **Known limitation:** OpenSky Network appears to block outbound connections from Render's IP ranges at the network level — requests fail with a TCP connection timeout, not a clean `429`. This surfaces as a `500` from `/api/flights`. **Confirmed:** adding `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` (step 4 above) does **not** help — the authenticated request times out identically to the anonymous one, since the block happens before either request can even connect. It's an upstream/network restriction on Render's IP ranges, not an app bug or a credentials problem. If you hit this, hosting on a provider whose IPs aren't blocked (a non-datacenter connection, or a different cloud provider) is the only known workaround. This is open source — PRs improving on this are welcome.
 
 ---
 

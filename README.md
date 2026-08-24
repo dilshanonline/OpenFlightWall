@@ -271,11 +271,7 @@ docker run -p 5050:5050 \
 
 The [live demo](https://openflightwall.onrender.com/) above is running exactly this setup:
 
-1. Render dashboard → **New → Web Service** → connect the `OpenFlightWall` GitHub repo → Render auto-detects the `Dockerfile` and builds it directly (redeploys on every push to `main`).
-2. Alternatively, skip the build step entirely: **New → Web Service → Deploy an existing image** → `docker.io/dilshanonline/openflightwall:latest` (the same image published by CI on every tagged release).
-3. Render injects `PORT` automatically — no config needed, gunicorn already binds to it.
-4. Optionally add `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` as environment variables in the Render dashboard for a higher rate limit.
-5. **Known limitation:** OpenSky Network appears to block outbound connections from Render's IP ranges at the network level — requests fail with a TCP connection timeout, not a clean `429`. This surfaces as a `500` from `/api/flights`. **Confirmed:** adding `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` (step 4 above) does **not** help — the authenticated request times out identically to the anonymous one, since the block happens before either request can even connect. It's an upstream/network restriction on Render's IP ranges, not an app bug or a credentials problem. If you hit this, hosting on a provider whose IPs aren't blocked (a non-datacenter connection, or a different cloud provider) is the only known workaround. This is open source — PRs improving on this are welcome.
+**Known limitation:** OpenSky Network appears to block outbound connections from Render's IP ranges at the network level — requests fail with a TCP connection timeout, not a clean `429`. This surfaces as a `500` from `/api/flights`. **Confirmed:** adding `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` (step 4 above) does **not** help — the authenticated request times out identically to the anonymous one, since the block happens before either request can even connect. It's an upstream/network restriction on Render's IP ranges, not an app bug or a credentials problem. If you hit this, hosting on a provider whose IPs aren't blocked (a non-datacenter connection, or a different cloud provider) is the only known workaround. This is open source — PRs improving on this are welcome.
 
 ---
 

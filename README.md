@@ -34,9 +34,10 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 - **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with an optional **auto-dismiss** ("Stays open" by default; choose Dismiss in 30s / 1 / 2 / 5 min from the header, with a live "Dismiss in M:SS" countdown next to the button).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
 - **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).
-- **Sort & filter** — sort by distance / altitude / airline, and a hide-on-ground toggle (labelled header controls).
+- **Sort & filter** — sort by distance / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
 - **Climb/descent + squawk** — ▲/▼ vertical-rate indicator and transponder squawk code.
 - **Browser geolocation** — centres on you automatically, with a manual lat/lon entry and click-to-set fallback (no config file).
+- **Save location** — optional **Save location** checkbox in the header remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.
 - **Adjustable radius** — change the search radius live from the header.
 - **OpenSky account, in-app** — add optional free OpenSky credentials from a ⚙ Settings panel for a higher rate limit (validated live; no restart).
 - **Free bucket first** — when a key is set, the app uses the free anonymous quota first and only switches to your account key once the free quota is exhausted (maximising your total daily requests).
@@ -110,7 +111,7 @@ Location and radius are set in the browser (no config file needed):
 
 | Setting | Where | Notes |
 |---|---|---|
-| Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load |
+| Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in the header to reuse it next time |
 | Search radius | Radius input in the header (default **10 km**) | Change it live; flights re-fetch immediately |
 
 ### Optional: OpenSky account (recommended — avoids rate limits)

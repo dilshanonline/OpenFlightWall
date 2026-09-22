@@ -907,6 +907,10 @@
       // Click the map to set your location manually (fallback when GPS fails)
       map.on('click', (e) => setLocation(e.latlng.lat, e.latlng.lng));
 
+      // Rebuild plane markers on zoom so their size updates immediately
+      // instead of waiting for the next poll.
+      map.on('zoomend', renderMap);
+
       applyUserLocation();
     }
 
@@ -937,14 +941,22 @@
       map.setView(latlng, 9);
     }
 
+    // 42px at the default zoom (9), +3px per zoom level, clamped so it
+    // never gets illegibly small or absurdly large.
+    function planeIconSize() {
+      const zoom = map ? map.getZoom() : 9;
+      return Math.round(Math.max(32, Math.min(64, 42 + (zoom - 9) * 3)));
+    }
+
     function planeMarker(f) {
       const heading = f.heading_deg || 0;
+      const size = planeIconSize();
       const icon = L.divIcon({
         className: '',
         html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''}"
-                    style="transform: rotate(${heading}deg)">✈</div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
+                    style="transform: rotate(${heading}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
       });
       const marker = L.marker([f.lat, f.lon], { icon });
 

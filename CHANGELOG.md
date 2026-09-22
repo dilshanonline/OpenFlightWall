@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-22
+
+### Fixed
+- Plane icons on the map are now bigger and grow as you zoom in, instead of staying a fixed pixel size. Previously the icon stayed pinned at 20×20px at every zoom level, so relative to the map it looked like it was shrinking the more you zoomed in.
+
 ## [1.1.0] - 2026-09-22
 
 ### Added

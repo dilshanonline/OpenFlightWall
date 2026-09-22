@@ -1,6 +1,6 @@
 [project]
 name = "openflightwall"
-version = "1.1.0"
+version = "1.1.1"
 description = "Zero-cost flight-tracking dashboard in your browser — OpenFlightWall"
 readme = "README.md"
 requires-python = ">=3.11"

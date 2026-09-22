@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-22
+
+### Added
+- The **Hide ground** toggle is now remembered across reloads, so it no longer resets to off on every visit.
+- **Save location** checkbox in the header. A manually entered lat/lon (or a spot picked on the map) was forgotten on every reload, so it had to be typed in again each time. Tick the box and the location is remembered in this browser and reused on the next visit instead of re-running geolocation; untick it and the stored coordinates are deleted. Off by default, so nothing is stored unless asked for. The coordinates stay in `localStorage` and are never sent to the server. Where the browser blocks site data the checkbox is disabled and explains why.
+
 ### Fixed
 - Location detection over plain `http://` reported "Location permission denied" even though no permission prompt was ever shown. Geolocation is a secure-context-only API, so over plain `http://` the browser rejects the request instantly with `PERMISSION_DENIED` — the app relayed that raw error code and sent users looking for a dialog that could not appear. `requestLocation()` now checks `window.isSecureContext` first (matching the existing notification diagnostics) and names the real blocker.
 

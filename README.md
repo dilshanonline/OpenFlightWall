@@ -94,6 +94,16 @@ poetry run python app.py
 
 Prefer a different workflow, or want to add first-class docs/lockfile support for another tool? PRs are very welcome.
 
+### Or run the prebuilt Docker image
+
+No Python setup needed:
+
+```bash
+docker run -p 5050:5050 dilshanonline/openflightwall:latest
+```
+
+See [Docker](#docker) below for OpenSky credentials, port config, and image tags.
+
 **Open your browser**
 ```
 http://localhost:5050
@@ -264,6 +274,7 @@ docker run -p 5050:5050 \
 ```
 
 - `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` are optional — omit them to run keyless.
+- Credentials can also be set at runtime from the ⚙ Settings panel in the UI instead of env vars — no restart needed. They're written to `opensky_creds.json` inside the container, so without a mounted volume they're lost if the container is removed; mount a volume over that path to persist them across restarts.
 - The container listens on the `PORT` env var (default `5050`); set it if you need a different internal port, and adjust `-p` to match.
 - Tags: `latest` (newest release), plus semantic versions like `1.2.0`, `1.2`, `1` for pinning.
 - Runs behind [gunicorn](https://gunicorn.org/) in the image — the local `uv run python app.py` dev workflow above is unaffected and still uses Flask's own dev server.

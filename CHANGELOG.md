@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Location detection over plain `http://` reported "Location permission denied" even though no permission prompt was ever shown. Geolocation is a secure-context-only API, so over plain `http://` the browser rejects the request instantly with `PERMISSION_DENIED` — the app relayed that raw error code and sent users looking for a dialog that could not appear. `requestLocation()` now checks `window.isSecureContext` first (matching the existing notification diagnostics) and names the real blocker.
+
 ## [1.0.2] - 2026-08-22
 
 ### Fixed

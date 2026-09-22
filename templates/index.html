@@ -509,7 +509,9 @@
           <option value="airline">Airline</option>
         </select>
       </label>
-      <label><input type="checkbox" onchange="onHideGround(this.checked)"> Hide ground</label>
+      <label><input id="hide-ground" type="checkbox" onchange="onHideGround(this.checked)"> Hide ground</label>
+      <label><input id="save-loc" type="checkbox" onchange="onSaveLocation(this.checked)"
+                    title="Remember this location in this browser and reuse it next time instead of re-detecting"> Save location</label>
       <label>Notify
         <select id="notify" onchange="onNotifyChange(this.value)" title="Browser notifications">
           <option value="off">Off</option>
@@ -1058,7 +1060,11 @@
     }
 
     function onSortChange(value) { sortBy = value; refreshUI(); }
-    function onHideGround(checked) { hideGround = checked; refreshUI(); }
+    function onHideGround(checked) {
+      hideGround = checked;
+      lsSet(LS_GROUND, checked ? '1' : null);
+      refreshUI();
+    }
 
     // ── Browser notifications ──
     // Modes: 'off' (default), 'new' (every new flight), 'overhead' (only overhead), 'both'.
@@ -1328,6 +1334,63 @@
       }
     }
 
+    /* ────────────── Stored preferences ────────────── */
+
+    // Browser-only persistence — nothing here is sent to the server, matching
+    // how location and radius are already browser-side state.
+    //
+    // Every localStorage access is guarded: reading or writing it *throws* when
+    // the browser blocks site data (private windows, strict privacy settings),
+    // so an unguarded call would break the whole page on load.
+    const LS_SAVE   = 'ofw:saveLocation';
+    const LS_LOC    = 'ofw:location';
+    const LS_GROUND = 'ofw:hideGround';
+
+    let saveLocation = false;   // whether to persist the location across reloads
+
+    function storageAvailable() {
+      try {
+        localStorage.setItem('ofw:probe', '1');
+        localStorage.removeItem('ofw:probe');
+        return true;
+      } catch { return false; }
+    }
+
+    function lsGet(key) {
+      try { return localStorage.getItem(key); } catch { return null; }
+    }
+
+    // A null value removes the key, so "off" never leaves a stale entry behind.
+    function lsSet(key, value) {
+      try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      } catch { /* storage blocked — preferences simply do not persist */ }
+    }
+
+    // Stored coordinates, or null if absent, unreadable or malformed.
+    function readSavedLocation() {
+      try {
+        const v = JSON.parse(lsGet(LS_LOC));
+        return v && Number.isFinite(v.lat) && Number.isFinite(v.lon)
+          ? { lat: v.lat, lon: v.lon } : null;
+      } catch { return null; }
+    }
+
+    function writeSavedLocation(loc) {
+      lsSet(LS_LOC, loc ? JSON.stringify(loc) : null);
+    }
+
+    // Header checkbox. Turning it on stores wherever we are now; turning it off
+    // forgets it, so an unchecked box never leaves coordinates behind. The
+    // location is opt-in because it is personal data — plain display
+    // preferences such as Hide ground persist on their own.
+    function onSaveLocation(checked) {
+      saveLocation = checked;
+      lsSet(LS_SAVE, checked ? '1' : null);
+      writeSavedLocation(checked && userLocation ? userLocation : null);
+    }
+
     /* ────────────── Location & radius ────────────── */
 
     function start() {
@@ -1338,7 +1401,38 @@
       sb.classList.toggle('active', soundOn);
       initNotify();
       loadConfig();
-      requestLocation();
+      initHideGround();
+      initSavedLocation();
+    }
+
+    // Restore the Hide ground toggle. Unlike the location this needs no opt-in:
+    // it is a display preference, not personal data.
+    function initHideGround() {
+      hideGround = lsGet(LS_GROUND) === '1';
+      document.getElementById('hide-ground').checked = hideGround;
+    }
+
+    // Restore a previously saved location, or fall back to auto-detection.
+    // A saved location is applied directly so the user is not re-prompted for
+    // geolocation on every load.
+    function initSavedLocation() {
+      const box = document.getElementById('save-loc');
+      if (!storageAvailable()) {
+        box.disabled = true;
+        box.title = 'This browser is blocking site data, so the location cannot be saved.';
+        requestLocation();
+        return;
+      }
+      try { saveLocation = localStorage.getItem(LS_SAVE) === '1'; } catch { saveLocation = false; }
+      box.checked = saveLocation;
+
+      const saved = saveLocation ? readSavedLocation() : null;
+      if (!saved) { requestLocation(); return; }
+      // Mirror it into the manual inputs so the prompt, if it is ever shown
+      // again, starts from the saved values rather than empty boxes.
+      document.getElementById('loc-lat').value = saved.lat;
+      document.getElementById('loc-lon').value = saved.lon;
+      setLocation(saved.lat, saved.lon);
     }
 
     // Sync the notify dropdown with the default mode and request permission.
@@ -1542,6 +1636,7 @@
     // Apply a location from any source (GPS, manual, or map click).
     function setLocation(lat, lon) {
       userLocation = { lat, lon };
+      if (saveLocation) writeSavedLocation(userLocation);
       hideLocPrompt();
       applyUserLocation();               // recenter map + marker if map is open
       if (!polling) beginPolling(); else loadFlights();

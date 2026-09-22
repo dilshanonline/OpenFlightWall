@@ -1585,11 +1585,26 @@
       }
     }
 
+    // Why the browser will not hand over a location, or null if it might.
+    // Geolocation is secure-context-only: on a plain http:// origin (anything
+    // but localhost) the call is rejected instantly with PERMISSION_DENIED and
+    // no prompt is ever shown — so the raw error code would otherwise send
+    // people hunting for a permission dialog that cannot appear.
+    function locationBlockReason() {
+      if (!window.isSecureContext) {
+        return 'Location requires a secure connection — open the dashboard '
+             + 'over https://. The browser blocks the request without asking.';
+      }
+      if (!navigator.geolocation) return 'Geolocation is not supported by this browser.';
+      return null;
+    }
+
     // Request the browser's geolocation. On success, use it. On failure,
     // show the manual-entry prompt (and the map click still works).
     function requestLocation() {
-      if (!navigator.geolocation) {
-        showLocPrompt('Geolocation is not supported by this browser.');
+      const blocked = locationBlockReason();
+      if (blocked) {
+        showLocPrompt(blocked);
         return;
       }
       setStatus('loading', 'Requesting your location…');
@@ -1597,7 +1612,7 @@
         (pos) => setLocation(pos.coords.latitude, pos.coords.longitude),
         (err) => {
           const reason = {
-            1: 'Location permission denied.',
+            1: 'Location permission denied — allow it in the site settings.',
             2: 'Location unavailable (check OS location services).',
             3: 'Location request timed out.',
           }[err.code] || 'Could not detect your location.';

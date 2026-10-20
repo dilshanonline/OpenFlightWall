@@ -122,12 +122,12 @@ Other backend facts:
 
 - `Dockerfile` — multi-stage build (`python:3.12-slim`): a `builder` stage uses `uv sync --extra server` to install deps (incl. gunicorn) into `.venv`, then a `runtime` stage copies just `.venv` + `app.py` + `pyproject.toml` (for `APP_VERSION`) + `templates/` and runs as a non-root user.
 - The container's `CMD` runs **gunicorn** (`gunicorn --bind 0.0.0.0:${PORT} ... app:app`), importing the Flask `app` object directly — it never executes the `if __name__ == "__main__":` block, so local dev (`uv run python app.py`, Flask's own dev server) is completely separate and unaffected by Docker changes.
-- `PORT` env var controls the bind port (default `5050`) — required for platforms like Render that inject their own port.
+- `PORT` env var controls the bind port (default `5050`) — for hosts that inject their own port.
 - `.github/workflows/docker-publish.yml` builds and pushes multi-arch (`linux/amd64`+`linux/arm64`) images to Docker Hub (`dilshanonline/openflightwall`) on `v*.*.*` git tags only — pushing to `main` does **not** trigger a build. Its first step fails the run if the tag differs from `pyproject.toml`'s version; a second `release` job (after the image is pushed, `contents: write` scoped to that job) creates the GitHub Release with that version's `CHANGELOG.md` section as notes (`--prerelease` for tags containing `-`).
 - **Releasing**: see [Release Process](#release-process).
 - Local test build: `docker buildx build --load -t openflightwall:test .` then `docker run -p 5050:5050 openflightwall:test`.
 - If you add a new Python dependency needed at runtime, add it to `dependencies` (or the `server` extra in `[project.optional-dependencies]` if Docker-only) in `pyproject.toml`, then run `uv lock` to update `uv.lock` — the Docker build uses `uv sync --frozen`, so a stale lockfile will fail the build.
-- Live demo deployed on Render (free tier): https://openflightwall.onrender.com/ — built directly from this repo's `Dockerfile`, redeploys on push to `main`. **Known issue**: OpenSky Network sometimes blocks/throttles anonymous requests from cloud/datacenter IPs (Render, AWS, GCP, Heroku, etc.), which can surface as a `500` from `/api/flights` there — it's an upstream restriction (already caught and reported cleanly by the `except Exception` handler around `fetch_flights()` in `app.py`, not an app bug). Don't "fix" this by suppressing the error; a real fix would involve auth-first requests or a fallback data source.
+- **Cloud hosting caveat**: OpenSky blocks connections from some cloud/datacenter IP ranges (a timeout, not a `429`; credentials don't help), which surfaces as a `500` from `/api/flights` — an upstream restriction, already caught and reported cleanly by the `except Exception` handler around `fetch_flights()` in `app.py`. Don't "fix" this by suppressing the error; a real fix would need a fallback data source. The public demo is the GitHub Pages replay demo (see below), not a hosted server.
 
 ## Release Process
 
@@ -153,7 +153,7 @@ Releases follow [Semantic Versioning](https://semver.org/): **patch** (`1.2.1`) 
 7. **Watch the workflows** (Actions tab):
    - *Docker Publish* → version check → multi-arch image to Docker Hub (`X.Y.Z`, `X.Y`, `X`, `latest`) → **`release` job creates the GitHub Release** (tags containing `-`, e.g. `v2.0.0-beta.1`, become pre-releases).
    - *GitHub Pages* redeploys the website/demo if `site/`, `templates/index.html` or `docs/screenshots/` changed in the merge.
-8. **Verify.** The release appears at github.com/dilshanonline/OpenFlightWall/releases with the right notes; `docker pull dilshanonline/openflightwall:X.Y.Z` works; the website's version badge shows `vX.Y.Z`; Render redeploys from `main` automatically.
+8. **Verify.** The release appears at github.com/dilshanonline/OpenFlightWall/releases with the right notes; `docker pull dilshanonline/openflightwall:X.Y.Z` works; the website's version badge shows `vX.Y.Z`.
 
 **If something goes wrong:**
 - *Tag/version mismatch*: the workflow fails before building. Delete the tag (`git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`), fix `pyproject.toml` on `main`, and tag again.

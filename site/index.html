@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenFlightWall — nearby flights, on your wall</title>
+  <meta name="description" content="A free, keyless, open-source dashboard that shows the planes flying over you in real time — flight cards, a live map, overhead alerts and a full-screen wall mode.">
+  <link rel="canonical" href="https://dilshanonline.github.io/OpenFlightWall/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="OpenFlightWall — nearby flights, on your wall">
+  <meta property="og:description" content="Free, keyless, open source. See the planes overhead with live cards, a map, overhead alerts and a wall mode for your TV.">
+  <meta property="og:url" content="https://dilshanonline.github.io/OpenFlightWall/">
+  <meta property="og:image" content="https://dilshanonline.github.io/OpenFlightWall/screenshots/wall-mode.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://dilshanonline.github.io/OpenFlightWall/screenshots/wall-mode.png">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+
+  <style>
+    :root {
+      --bg: #0d1117; --panel: #161b22; --line: #30363d; --line-soft: #21262d;
+      --text: #e6edf3; --muted: #8b949e; --faint: #484f58;
+      --accent: #58a6ff; --accent-strong: #1f6feb; --green: #3fb950;
+      --radius: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height: 1.6;
+    }
+    a { color: var(--accent); }
+    img { max-width: 100%; height: auto; display: block; }
+    code, pre { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    .wrap { width: min(1120px, 100% - 2rem); margin: 0 auto; }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    header .wrap { display: flex; align-items: center; gap: 1.5rem; height: 60px; }
+    .logo { font-weight: 700; letter-spacing: 0.04em; color: var(--accent); text-decoration: none; white-space: nowrap; }
+    .logo span { color: var(--text); }
+    nav { margin-left: auto; display: flex; gap: 1.25rem; font-size: 0.9rem; }
+    nav a { color: var(--muted); text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    /* Hero */
+    .hero {
+      padding: 4.5rem 0 3rem; text-align: center;
+      background: radial-gradient(ellipse at 50% 0%, #1c2a4a 0%, #111a2e 40%, var(--bg) 80%);
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      color: var(--accent); background: #1f6feb1f; border: 1px solid #1f6feb55;
+      border-radius: 999px; padding: 0.3rem 0.85rem; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+    }
+    .eyebrow[hidden] { display: none; }
+    h1 { font-size: clamp(2.2rem, 6vw, 3.8rem); line-height: 1.08; margin: 1.1rem auto 1rem; max-width: 16ch; letter-spacing: -0.02em; }
+    h1 em { font-style: normal; color: var(--accent); }
+    .lede { color: var(--muted); font-size: clamp(1rem, 2vw, 1.2rem); max-width: 60ch; margin: 0 auto; }
+    .ctas { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin: 2rem 0 0.9rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.45rem; text-decoration: none; font-weight: 600;
+      padding: 0.75rem 1.3rem; border-radius: 10px; border: 1px solid var(--line); color: var(--text); background: var(--panel);
+    }
+    .btn:hover { border-color: var(--muted); }
+    .btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+    .btn.primary:hover { background: #388bfd; }
+    .small-link { font-size: 0.9rem; color: var(--muted); }
+    .hero-shot {
+      margin: 2.75rem auto 0; width: min(1000px, 100%); border-radius: var(--radius);
+      border: 1px solid var(--line); box-shadow: 0 30px 80px #000c;
+    }
+
+    /* Sections */
+    section { padding: 4.5rem 0; border-top: 1px solid var(--line-soft); }
+    h2 { font-size: clamp(1.6rem, 3.5vw, 2.3rem); line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 0.75rem; }
+    .section-lede { color: var(--muted); max-width: 62ch; margin-bottom: 2.5rem; }
+    .label { color: var(--accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
+    .feature { display: grid; grid-template-columns: 1fr 1.25fr; gap: 3rem; align-items: center; margin-bottom: 4rem; }
+    .feature:last-of-type { margin-bottom: 0; }
+    .feature.flip .feature-text { order: 2; }
+    .feature h3 { font-size: 1.45rem; line-height: 1.2; margin-bottom: 0.6rem; }
+    .feature p { color: var(--muted); }
+    .feature ul { color: var(--muted); margin: 0.75rem 0 0 1.1rem; }
+    .feature img { border-radius: var(--radius); border: 1px solid var(--line); box-shadow: 0 20px 50px #0009; }
+    .feature img.phone { width: min(300px, 100%); margin: 0 auto; }
+    .feature code { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.1rem 0.4rem; font-size: 0.85em; color: var(--text); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 3rem; }
+    .tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; }
+    .tile b { display: block; margin-bottom: 0.3rem; }
+    .tile span { color: var(--muted); font-size: 0.9rem; }
+
+    /* Story */
+    .story { display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: center; }
+    .story img { border-radius: var(--radius); border: 1px solid var(--line); }
+    .story p { color: var(--muted); margin-bottom: 1.5rem; }
+
+    /* Keyless table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    td:first-child { font-weight: 600; white-space: nowrap; }
+    td:last-child { color: var(--muted); }
+    .table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+    .note { color: var(--muted); font-size: 0.9rem; margin-top: 1rem; }
+
+    /* Quickstart */
+    .tabs { display: flex; gap: 0.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.25rem; width: fit-content; }
+    .tabs button {
+      background: none; border: none; color: var(--muted); font: inherit; font-size: 0.9rem; font-weight: 600;
+      padding: 0.45rem 1rem; border-radius: 7px; cursor: pointer;
+    }
+    .tabs button[aria-selected="true"] { background: var(--accent-strong); color: #fff; }
+    .code { position: relative; margin-top: 1rem; }
+    .code pre {
+      background: #010409; border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 1.1rem 1.2rem; overflow-x: auto; font-size: 0.9rem; line-height: 1.7; color: var(--text);
+    }
+    .code pre .c { color: var(--faint); }
+    .copy {
+      position: absolute; top: 0.6rem; right: 0.6rem; background: var(--panel); border: 1px solid var(--line);
+      color: var(--muted); border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.75rem; cursor: pointer;
+    }
+    .copy:hover { color: var(--text); }
+    .then { color: var(--muted); margin-top: 1rem; }
+
+    footer { border-top: 1px solid var(--line-soft); padding: 2.5rem 0 3rem; color: var(--muted); font-size: 0.88rem; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 1.5rem 2.5rem; justify-content: space-between; }
+    footer ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+    footer .fine { flex-basis: 100%; color: var(--faint); font-size: 0.8rem; }
+
+    @media (max-width: 820px) {
+      nav a:not(.keep) { display: none; }
+      .feature, .story { grid-template-columns: 1fr; gap: 1.5rem; }
+      .feature.flip .feature-text { order: 0; }
+      section { padding: 3.25rem 0; }
+      .hero { padding-top: 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="wrap">
+      <a class="logo" href="#">✈ Open<span>Flight</span>Wall</a>
+      <nav>
+        <a class="keep" href="demo/">Demo</a>
+        <a href="#features">Features</a>
+        <a href="#story">Story</a>
+        <a href="#quickstart">Quickstart</a>
+        <a class="keep" href="https://github.com/dilshanonline/OpenFlightWall">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <span class="eyebrow" id="version" hidden></span>
+        <h1>Nearby flights, <em>on your wall.</em></h1>
+        <p class="lede">
+          OpenFlightWall shows the planes flying over you in real time: who they are, where they're
+          going and how far along they are. Free, keyless and open source; it runs on your own machine.
+        </p>
+        <div class="ctas">
+          <a class="btn primary" href="demo/">▶ Try the demo</a>
+          <a class="btn" href="#quickstart">Run it yourself</a>
+        </div>
+        <a class="small-link" href="#story">Read how it started →</a>
+        <img class="hero-shot" src="screenshots/wall-mode.png" width="1920" height="1200"
+             alt="OpenFlightWall wall mode: a large clock, a Cathay Pacific 777 drawn with its logo on the tail, its route from Hong Kong to London and live stats">
+      </div>
+    </div>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="label">Features</div>
+        <h2>Everything about the plane you just heard</h2>
+        <p class="section-lede">
+          Live positions from the OpenSky Network, enriched with routes, aircraft types, photos and airline
+          logos from free community sources, and computed progress and arrival times.
+        </p>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h3>"Overhead now" alerts</h3>
+            <p>
+              When a plane passes within about 3 km, a full-screen alert shows it with the airline logo on the
+              tail, the route with cities and flags, how far along the flight is, and live altitude, speed and
+              heading. It closes itself after a minute, or stays open if you prefer.
+            </p>
+            <ul>
+              <li>Optional browser notifications and a sound ping for new flights</li>
+              <li>Plane art matches the type: jumbos, wide-bodies, regional jets, turboprops, helicopters…</li>
+            </ul>
+          </div>
+          <img src="screenshots/overhead-alert.png" width="1920" height="1200" loading="lazy"
+               alt="Full-screen overhead alert for a Cathay Pacific Boeing 777 with route, progress bar and stat tiles">
+        </div>
+
+        <div class="feature flip">
+          <div class="feature-text">
+            <h3>A live map that moves</h3>
+            <p>
+              A dark map with every plane rotated to its heading, gliding smoothly between updates and trailing
+              its recent path. Click a plane for its photo and details and its great-circle route; click the map
+              to move your location.
+            </p>
+          </div>
+          <img src="screenshots/map-view.png" width="1920" height="1200" loading="lazy"
+               alt="Dark map of London with plane icons, short trails and a popup showing a Cathay Pacific 777">
+        </div>
+
+        <div class="feature">
+          <div class="feature-text">
+            <h3>Wall mode for a TV or Raspberry Pi</h3>
+            <p>
+              Put it on a spare screen: a big clock, the nearest flights shown in turn with large aircraft art,
+              and a ticker of everything else. It keeps the screen awake while it's showing.
+            </p>
+            <p style="margin-top:0.75rem">Open it with the 🖥 button, or point a kiosk browser at
+              <code>http://localhost:5050/?wall=1</code>, e.g.
+              <code>chromium --kiosk http://localhost:5050/?wall=1</code></p>
+          </div>
+          <img src="screenshots/wall-mode.png" width="1920" height="1200" loading="lazy"
+               alt="Wall mode with a large clock, featured flight and scrolling ticker">
+        </div>
+
+        <div class="feature flip">
+          <div class="feature-text">
+            <h3>Cards, a spotlight, and your phone</h3>
+            <p>
+              Every flight gets a card with its photo, airline logo, route, progress and ETA, and the closest one
+              gets a spotlight banner. On a phone the controls fold into a menu so it works in your pocket too.
+            </p>
+          </div>
+          <img class="phone" src="screenshots/mobile.png" width="750" height="1500" loading="lazy"
+               alt="OpenFlightWall on a phone, showing the Closest flight banner and a flight card">
+        </div>
+
+        <div class="grid">
+          <div class="tile"><b>🔔 Notifications &amp; sound</b><span>New flights, overhead only, or both.</span></div>
+          <div class="tile"><b>↕ Sort &amp; filter</b><span>By distance, altitude or airline; hide aircraft on the ground.</span></div>
+          <div class="tile"><b>📍 Your location stays yours</b><span>Detected in the browser and never sent anywhere; optionally remembered locally.</span></div>
+          <div class="tile"><b>✨ Update alerts</b><span>A small notice when a new release is out, with what's new.</span></div>
+          <div class="tile"><b>🐳 Docker image</b><span>Multi-arch (amd64 + arm64), so a Raspberry Pi works out of the box.</span></div>
+          <div class="tile"><b>🛫 Climb, descent &amp; squawk</b><span>Vertical-rate arrows and transponder codes at a glance.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="story">
+      <div class="wrap story">
+        <a href="https://dilshanw.medium.com/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31">
+          <img src="screenshots/article-cover-1.png" width="2800" height="1576" loading="lazy"
+               alt="Cover of the Medium article about building OpenFlightWall">
+        </a>
+        <div>
+          <div class="label">The story</div>
+          <h2>How a plane-watching habit became a free flight dashboard</h2>
+          <p>
+            The story behind OpenFlightWall: how the project came to be, and how it ended up as a dashboard
+            built entirely on free data. Written by its creator on Medium.
+          </p>
+          <a class="btn primary" href="https://dilshanw.medium.com/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31">Read the story on Medium →</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="keyless">
+      <div class="wrap">
+        <div class="label">Keyless by design</div>
+        <h2>No subscriptions. No API keys. No telemetry.</h2>
+        <p class="section-lede">
+          Every data source is free and works without an account. Everything runs on your machine; there is no
+          OpenFlightWall server in between.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Provides</th></tr></thead>
+            <tbody>
+              <tr><td>OpenSky Network</td><td>Live positions, callsign, altitude, speed, heading, squawk</td></tr>
+              <tr><td>hexdb.io</td><td>Aircraft type from the transponder address</td></tr>
+              <tr><td>adsbdb.com</td><td>Route, flight number, airline, registration and aircraft photo</td></tr>
+              <tr><td>Kiwi.com</td><td>Airline logos</td></tr>
+              <tr><td>OpenStreetMap</td><td>Map tiles</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">
+          OpenSky's anonymous limit is low. A <b>free</b> OpenSky account raises it a lot; add it from the ⚙ settings
+          panel, and the credentials never leave your machine.
+        </p>
+      </div>
+    </section>
+
+    <section id="quickstart">
+      <div class="wrap">
+        <div class="label">Quickstart</div>
+        <h2>Running in a minute</h2>
+        <p class="section-lede">Pick one. You need Python 3.11+ or Docker.</p>
+
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-tab="docker">Docker</button>
+          <button role="tab" aria-selected="false" data-tab="uv">uv</button>
+          <button role="tab" aria-selected="false" data-tab="pip">pip</button>
+        </div>
+        <div class="code" data-panel="docker">
+          <button class="copy">Copy</button>
+<pre>docker run -p 5050:5050 dilshanonline/openflightwall:latest</pre>
+        </div>
+        <div class="code" data-panel="uv" hidden>
+          <button class="copy">Copy</button>
+<pre>git clone https://github.com/dilshanonline/OpenFlightWall.git
+cd OpenFlightWall
+uv sync
+uv run python app.py</pre>
+        </div>
+        <div class="code" data-panel="pip" hidden>
+          <button class="copy">Copy</button>
+<pre>git clone https://github.com/dilshanonline/OpenFlightWall.git
+cd OpenFlightWall
+python -m venv .venv
+source .venv/bin/activate   <span class="c"># Windows: .venv\Scripts\activate</span>
+pip install flask requests python-dotenv
+python app.py</pre>
+        </div>
+        <p class="then">
+          Then open <a href="http://localhost:5050">http://localhost:5050</a> and allow location access, or type your
+          coordinates in. Full setup, OpenSky credentials and Docker options are in the
+          <a href="https://github.com/dilshanonline/OpenFlightWall#readme">README</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div>✈ <b>OpenFlightWall</b> by <a href="https://dilshanwijesooriya.me/">Dilshan Wijesooriya</a></div>
+      <ul>
+        <li><a href="https://github.com/dilshanonline/OpenFlightWall">GitHub</a></li>
+        <li><a href="https://dilshanw.medium.com/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31">The story</a></li>
+        <li><a href="https://github.com/dilshanonline/OpenFlightWall/blob/main/CHANGELOG.md">Changelog</a></li>
+        <li><a href="https://openflightwall.onrender.com/">Hosted demo</a></li>
+        <li><a href="https://hub.docker.com/r/dilshanonline/openflightwall">Docker Hub</a></li>
+      </ul>
+      <p class="fine">
+        Apache License 2.0. Inspired by <a href="https://github.com/AxisNimble/TheFlightWall_OSS">TheFlightWall</a>.
+        The hosted demo on Render sometimes can't reach OpenSky, which blocks some cloud networks; the
+        <a href="demo/">replay demo</a> always works.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // Quickstart tabs + copy buttons.
+    document.querySelectorAll('.tabs button').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tabs button').forEach((t) => t.setAttribute('aria-selected', t === tab));
+        document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+      });
+    });
+    document.querySelectorAll('.copy').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const text = btn.nextElementSibling.innerText.replace(/\s+#.*$/gm, '');
+        try { await navigator.clipboard.writeText(text); }
+        catch {
+          const range = document.createRange();
+          range.selectNodeContents(btn.nextElementSibling);
+          getSelection().removeAllRanges();
+          getSelection().addRange(range);
+        }
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    });
+
+    // Latest version from GitHub (releases, falling back to tags); stays hidden if unavailable.
+    (async () => {
+      const api = 'https://api.github.com/repos/dilshanonline/OpenFlightWall';
+      try {
+        let tag = null;
+        const rel = await fetch(`${api}/releases/latest`);
+        if (rel.ok) tag = (await rel.json()).tag_name;
+        else {
+          const tags = await (await fetch(`${api}/tags?per_page=100`)).json();
+          const semver = (t) => (t.match(/^v?(\d+)\.(\d+)\.(\d+)$/) || []).slice(1).map(Number);
+          tag = tags.map((t) => t.name).filter((n) => semver(n).length)
+            .sort((a, b) => { const x = semver(a), y = semver(b); return (y[0] - x[0]) || (y[1] - x[1]) || (y[2] - x[2]); })[0];
+        }
+        if (!tag) return;
+        const el = document.getElementById('version');
+        el.textContent = `● ${tag.startsWith('v') ? tag : 'v' + tag} · free & open source`;
+        el.hidden = false;
+      } catch { /* offline or rate-limited: leave the badge hidden */ }
+    })();
+  </script>
+</body>
+</html>

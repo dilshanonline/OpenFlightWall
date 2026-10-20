@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-20
+
+### Added
+- **Project website on GitHub Pages** (`https://dilshanonline.github.io/OpenFlightWall/`) with a **replay demo** that runs the real dashboard in the browser on a recorded snapshot of real flights near London, with no server. Planes keep flying along their headings, and the demo banner can trigger the overhead alert or wall mode. It is built by `site/build.py` (Python stdlib only) and deployed by a new GitHub Pages workflow. The dashboard gained a small `window.OFW_DEMO` hook that is inactive in the normal app.
+- **Wall mode** — a full-screen display for a TV, Raspberry Pi or spare monitor: a big clock and date, the nearest flights shown in turn (every 12 s) with large aircraft art, route and live stats, and a scrolling ticker of every other flight. It keeps the screen awake where the browser supports it, and the overhead alert still appears on top. Open it with the new 🖥 header button (which also goes full screen) or by loading `/?wall=1`; leave with Esc or ✕.
+- **New-version alert.** The app now checks GitHub for a newer release (on load and then daily while the page stays open, so wall-mode screens hear about it too; the server caches GitHub's answer for 6 hours) and shows a small dismissible notice with a "What's new" link and the update command; dismissing it hides it until the next release. `uv run python app.py` also prints a one-line notice at startup, and the ⚙ settings panel shows the running version. Set `OFW_UPDATE_CHECK=0` to never contact GitHub. New `GET /api/version` endpoint.
+- **Plane trails and smooth motion on the map.** Each plane leaves a short trail through its recent positions, and between the 30-second updates planes glide along their heading at their ground speed instead of jumping. Turned off when the OS asks for reduced motion.
+- **Dark map** by default, matching the rest of the UI, with a layer button to switch back to the standard OpenStreetMap style (the choice is remembered). It recolours the same free OSM tiles in the browser, so no new map service or API key is involved.
+
+### Changed
+- Redesigned the full-screen **Overhead now** alert. Instead of a bobbing emoji and a line of grey text, it now shows a vector drawing of an airliner with the airline's logo painted on the tail fin (or the airline's ICAO code if no logo is available), the airline name and registration on the fuselage, and the nose pointing in the plane's direction of travel. Below it are the full route with cities and flags, the progress bar and ETA, and live tiles for altitude (with climb/descent), speed, distance, heading and squawk. Clouds drift in the background; motion is turned off when the OS asks for reduced motion.
+- The **Closest flight** banner above the cards now shows the same vector aircraft with the airline logo on its tail, alongside the route, progress bar and ETA, registration, and a climb/descent arrow on the altitude.
+- The vector aircraft art now **matches the aircraft type**: four-engine jumbos (with the 747's upper deck), longer wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops with spinning propellers, light aircraft (registration on the fin) and helicopters.
+- The full-screen overhead alert now **dismisses itself after 1 minute** by default (it used to stay open until clicked). Choose **Stays open** from the header's "Overhead alert" dropdown to keep the old behaviour.
+- **Works on phones.** Below about 1320 px wide, the header controls fold into a ☰ panel instead of overflowing the screen (the page used to be more than twice as wide as a phone screen); on very narrow screens the page margins shrink.
+- Map popups **stay open** across the 30-second refresh. Plane markers used to be thrown away and recreated on every poll, which closed any popup you had open.
+- Releases are now published as **GitHub Releases** automatically: pushing a `vX.Y.Z` tag builds and pushes the Docker image, then creates the release with that version's changelog notes. The workflow also refuses a tag that does not match the version in `pyproject.toml`.
+
+### Fixed
+- Airline names were never shown: the frontend expected an `airline_name` field that the backend never sent, so cards and the hero showed the ICAO code (e.g. "BAW") instead of "British Airways", and sorting by airline sorted by callsign. `/api/flights` now includes the airline name from adsbdb.com.
+
 ## [1.1.1] - 2026-09-22
 
 ### Fixed

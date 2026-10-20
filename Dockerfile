@@ -33,7 +33,7 @@ RUN groupadd --system app && useradd --system --gid app --no-create-home app
 
 WORKDIR /app
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
-COPY --chown=app:app app.py ./
+COPY --chown=app:app app.py pyproject.toml ./
 COPY --chown=app:app templates/ ./templates/
 
 ENV PATH="/app/.venv/bin:${PATH}" \

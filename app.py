@@ -8,6 +8,9 @@ Data pipeline (zero-cost):
   2. hexdb.io                    — aircraft type from ICAO24 hex code
   3. adsbdb.com                  — flight route (origin / destination airports)
 
+The running version comes from pyproject.toml; /api/version compares it with
+the latest GitHub release (opt out with OFW_UPDATE_CHECK=0).
+
 Location and search radius are chosen entirely in the browser (geolocation
 with a manual fallback) and passed to /api/flights as query parameters.
 
@@ -20,7 +23,10 @@ OpenSky access:
 import json
 import math
 import os
+import re
+import threading
 import time
+import tomllib
 from pathlib import Path
 
 import requests
@@ -45,6 +51,29 @@ OPENSKY_TOKEN_URL = (
 )
 HEXDB_BASE = "https://hexdb.io"
 ADSBDB_BASE = "https://api.adsbdb.com"
+
+# ── Version + update check ──
+# pyproject.toml is the single source of truth for the running version (the
+# Docker image copies it in too). New versions are discovered from GitHub
+# Releases, falling back to the highest vX.Y.Z tag while the repo has none.
+# Set OFW_UPDATE_CHECK=0 to never contact GitHub.
+GITHUB_REPO = "dilshanonline/OpenFlightWall"
+GITHUB_API = f"https://api.github.com/repos/{GITHUB_REPO}"
+VERSION_CACHE_TTL = 6 * 3600       # successful lookup
+VERSION_FAIL_TTL = 30 * 60         # failed lookup — retry sooner
+_SEMVER_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
+
+
+def _read_app_version() -> str:
+    try:
+        with open(Path(__file__).with_name("pyproject.toml"), "rb") as fh:
+            return tomllib.load(fh)["project"]["version"]
+    except Exception:
+        return "unknown"
+
+
+APP_VERSION = _read_app_version()
+_version_cache = {"latest": None, "url": None, "ts": 0.0, "ttl": 0}
 
 # OpenSky OAuth credentials (client_credentials flow). Keyless by default; can be
 # set via env vars, a .env file, or live from the UI (persisted to a local file).
@@ -344,10 +373,10 @@ def _airport_summary(ap: dict) -> dict:
 def get_route(callsign: str) -> dict:
     """
     Look up a flight's route + IATA flight number from adsbdb.com (free, keyless).
-    Returns {"origin", "destination", "flight_iata", "airline_callsign"}.
+    Returns {"origin", "destination", "flight_iata", "airline_name", "airline_callsign", "airline_iata"}.
     Cached per callsign for ROUTE_CACHE_TTL to limit upstream calls.
     """
-    empty = {"origin": None, "destination": None, "flight_iata": "", "airline_callsign": "", "airline_iata": ""}
+    empty = {"origin": None, "destination": None, "flight_iata": "", "airline_name": "", "airline_callsign": "", "airline_iata": ""}
     if not callsign:
         return empty
 
@@ -368,6 +397,7 @@ def get_route(callsign: str) -> dict:
                 "origin": _airport_summary(origin) if origin else None,
                 "destination": _airport_summary(destination) if destination else None,
                 "flight_iata": route.get("callsign_iata", "") or "",
+                "airline_name": airline.get("name", "") or "",
                 "airline_callsign": airline.get("callsign", "") or "",
                 "airline_iata": airline.get("iata", "") or "",
             }
@@ -479,6 +509,7 @@ def fetch_flights(center_lat: float, center_lon: float, radius_km: float) -> lis
         flights.append({
             **sv,
             "airline_icao": airline_icao,
+            "airline_name": route["airline_name"],
             "airline_callsign": route["airline_callsign"],
             "airline_iata": route["airline_iata"],
             "aircraft_code": aircraft_code,
@@ -505,6 +536,61 @@ def fetch_flights(center_lat: float, center_lon: float, radius_km: float) -> lis
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+def _semver(v):
+    """'v1.2.3' / '1.2.3' → (1, 2, 3); None for anything else (pre-releases, junk)."""
+    m = _SEMVER_RE.match(v or "")
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def update_check_enabled() -> bool:
+    return os.environ.get("OFW_UPDATE_CHECK", "1").strip().lower() not in ("0", "false", "no", "off")
+
+
+def get_latest_version():
+    """Return (latest_version, url) from GitHub, or (None, None). Cached."""
+    now = time.time()
+    if now - _version_cache["ts"] < _version_cache["ttl"]:
+        return _version_cache["latest"], _version_cache["url"]
+
+    latest, url = None, None
+    headers = {"Accept": "application/vnd.github+json",
+               "User-Agent": f"OpenFlightWall/{APP_VERSION}"}
+    try:
+        resp = requests.get(f"{GITHUB_API}/releases/latest", headers=headers, timeout=5)
+        if resp.status_code == 200:
+            rel = resp.json()
+            if _semver(rel.get("tag_name")):
+                latest, url = rel["tag_name"].lstrip("v"), rel.get("html_url")
+        elif resp.status_code == 404:
+            # No releases published yet — use the highest semver tag instead.
+            resp = requests.get(f"{GITHUB_API}/tags", params={"per_page": 100},
+                                headers=headers, timeout=5)
+            resp.raise_for_status()
+            tags = [t["name"] for t in resp.json() if _semver(t.get("name"))]
+            if tags:
+                best = max(tags, key=_semver)
+                latest = best.lstrip("v")
+                url = f"https://github.com/{GITHUB_REPO}/blob/{best}/CHANGELOG.md"
+    except Exception:
+        pass
+
+    _version_cache.update(latest=latest, url=url, ts=now,
+                          ttl=VERSION_CACHE_TTL if latest else VERSION_FAIL_TTL)
+    return latest, url
+
+
+def version_info() -> dict:
+    """Current version, latest published version, and whether to nag."""
+    latest, url = get_latest_version() if update_check_enabled() else (None, None)
+    cur, new = _semver(APP_VERSION), _semver(latest)
+    return {
+        "current": APP_VERSION,
+        "latest": latest,
+        "update_available": bool(cur and new and new > cur),
+        "url": url,
+    }
+
 
 @app.route("/api/flights")
 def api_flights():
@@ -545,6 +631,12 @@ def api_flights():
 @app.route("/")
 def index():
     return render_template("index.html", default_radius=DEFAULT_RADIUS_KM)
+
+
+@app.route("/api/version")
+def api_version():
+    """Running version + latest GitHub release, for the in-app update banner."""
+    return jsonify(version_info())
 
 
 @app.route("/api/config", methods=["GET"])
@@ -593,4 +685,15 @@ def delete_config():
 if __name__ == "__main__":
     mode = "authenticated (OAuth)" if (_creds["client_id"] and _creds["client_secret"]) else "anonymous"
     print(f"OpenSky access: {mode}")
+
+    # Announce a newer release in the console without delaying startup. Only in
+    # the reloader's child process, so the line is not printed twice.
+    def _announce_update():
+        info = version_info()
+        if info["update_available"]:
+            print(f"\n  ✨ New version v{info['latest']} available "
+                  f"(running v{info['current']}) — {info['url']}\n", flush=True)
+
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" and update_check_enabled():
+        threading.Thread(target=_announce_update, daemon=True).start()
     app.run(debug=True, port=5050)

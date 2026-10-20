@@ -4,6 +4,8 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 **[Live demo](https://openflightwall.onrender.com/)** — hosted free on Render. _(Occasionally shows a `500` fetching flights — see the [known limitation](#deploy-to-render-free-tier) below.)_
 
+**[Website & replay demo](https://dilshanonline.github.io/OpenFlightWall/)** — the project site, with a [demo](https://dilshanonline.github.io/OpenFlightWall/demo/) that runs the real dashboard in your browser on recorded flights (no install, no server).
+
 **[Read the story](https://medium.com/@dilshanw/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31)** — how this project came to be, on Medium.
 
 ![OpenFlightWall Medium article cover](docs/screenshots/article-cover-1.png)
@@ -15,23 +17,35 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 <img src="docs/screenshots/notification.png" width="500" alt="Browser notification">
 
-**Overhead notification:**
-![Overhead notification](docs/screenshots/overhead-alert.png)
+**Overhead alert:**
+![Overhead alert](docs/screenshots/overhead-alert.png)
 
 **Map view:**
 ![Map view](docs/screenshots/map-view.png)
+
+**Wall mode** (for a TV or spare screen):
+![Wall mode](docs/screenshots/wall-mode.png)
+
+**On a phone:**
+
+<img src="docs/screenshots/mobile.png" width="375" alt="OpenFlightWall on a phone">
 
 **Keyless by default:** every data source works with no API key or account. The only optional setup is a **free** OpenSky account, which raises the flight-position rate limit (see [Configuration](#configuration)). Nothing here ever costs money, and if you do add credentials, they **never leave your machine** — everything runs locally, with no telemetry and no third-party server in between.
 
 ## Features
 
 - **Card & Map views** — a responsive flight-card grid, or a live Leaflet/OpenStreetMap map with rotated plane icons; click anywhere on the map to move your location.
+- **Livelier map** — a dark basemap by default (switch back to the standard map from the layer button; your choice is remembered), planes that glide smoothly between updates instead of jumping, a short trail behind each plane, and popups that stay open across refreshes.
+- **Vector aircraft art** — the overhead alert, Closest-flight banner and wall mode draw the aircraft with the **airline logo on its tail**, the airline name along the fuselage, and the nose pointing the way it is flying. The shape follows the aircraft type: jumbos (747/A380), wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops, light aircraft and helicopters.
 - **Origin → destination routes** — full airport names + country flags, plus great-circle route arcs on the map.
 - **Flight progress + ETA** — progress bar with km flown / remaining and a rough "lands in ~1h 23m" estimate (computed locally).
 - **Aircraft photos & details** — photo, registration, manufacturer and owner from adsbdb.com.
 - **Airline logos** — carrier logo on cards, hero banner and map popups (Kiwi.com public CDN).
-- **Closest-flight hero banner** — spotlights the nearest aircraft (the LED-wall vibe).
-- **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with an optional **auto-dismiss** ("Stays open" by default; choose Dismiss in 30s / 1 / 2 / 5 min from the header, with a live "Dismiss in M:SS" countdown next to the button).
+- **Closest-flight hero banner** — spotlights the nearest aircraft with its vector art, route and progress (the LED-wall vibe).
+- **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with the aircraft art, route, progress and live stats. It **dismisses itself after 1 minute** by default, with a live "Dismiss in M:SS" countdown; pick 30s / 2 / 5 min, or **Stays open**, from the header.
+- **Wall mode** — a full-screen display for a TV, Raspberry Pi or spare monitor: a big clock, the nearest flights in turn with large aircraft art, and a scrolling ticker of everything else. It keeps the screen awake where the browser allows. Open it with the 🖥 button, or load `http://localhost:5050/?wall=1` (handy with a kiosk-mode browser); press Esc or ✕ to leave.
+- **Works on phones** — on narrow screens the header controls fold into a ☰ panel.
+- **New-version alert** — tells you when a newer release is out, with a link to what's new (in the browser, and in the console when you start the server). Turn it off with `OFW_UPDATE_CHECK=0`. See [Update notifications](#update-notifications).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
 - **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).
 - **Sort & filter** — sort by distance / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
@@ -124,6 +138,24 @@ Location and radius are set in the browser (no config file needed):
 | Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in the header to reuse it next time |
 | Search radius | Radius input in the header (default **10 km**) | Change it live; flights re-fetch immediately |
 
+The only server-side settings are optional environment variables (or a `.env` file — see `.env.example`):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET` | unset | Free OpenSky account for a higher rate limit (below) |
+| `OFW_UPDATE_CHECK` | `1` | Set to `0` to never ask GitHub whether a newer release exists |
+
+### Update notifications
+
+OpenFlightWall tells you when a newer version is out:
+
+- **How it checks:** the server reads its own version from `pyproject.toml` and asks GitHub's public API for the latest release. The answer is cached for 6 hours, so GitHub sees at most a few requests a day from your server.
+- **What is sent:** a plain request to `api.github.com` that names the running version in its `User-Agent` (e.g. `OpenFlightWall/1.1.1`). No location, flight data or credentials. GitHub sees your IP address, as with any web request.
+- **When it checks:** when the dashboard loads, then once a day while it stays open, so a wall-mode screen left running for weeks still gets the notice. The server re-asks GitHub at most every 6 hours, so a new release shows up within about a day.
+- **Where it shows:** a small notice at the bottom of the dashboard with a "What's new" link, and the running version in the ⚙ panel. **Dismiss** hides the notice until the next release. `uv run python app.py` also prints a one-line notice in the console at startup. The Docker image doesn't print it, so look for the notice in the browser.
+- **To update:** run `git pull && uv sync` and restart, or `docker pull dilshanonline/openflightwall:latest` and recreate the container.
+- **To turn it off:** set `OFW_UPDATE_CHECK=0` and GitHub is never contacted.
+
 ### Optional: OpenSky account (recommended — avoids rate limits)
 
 The app works **anonymously with no setup**, but OpenSky's anonymous API has a
@@ -168,6 +200,7 @@ All sources are **free**. Only OpenSky optionally uses a (free) account for a hi
 | hexdb.io | Aircraft type code (e.g. `B738`) from ICAO24 hex | `hexdb.io/api/v1/aircraft/{icao24}` |
 | adsbdb.com | Flight route + IATA flight number + airline telephony; and aircraft registration/owner/manufacturer/**photo** | `api.adsbdb.com/v0/callsign/{callsign}`, `.../v0/aircraft/{icao24}` |
 | Kiwi.com images | Airline logos by 2-letter IATA code | `images.kiwi.com/airlines/64/{IATA}.png` |
+| GitHub API | Latest release, for the new-version alert (cached 6 h; opt out with `OFW_UPDATE_CHECK=0`) | `api.github.com/repos/dilshanonline/OpenFlightWall/releases/latest` |
 
 ---
 
@@ -290,6 +323,15 @@ The [live demo](https://openflightwall.onrender.com/) above is running exactly t
 ## Contributing
 
 Contributions are welcome — bug fixes, new free/keyless data sources, UI improvements, docs for your favorite package manager, all of it. Open an issue or a PR. The one hard rule: this project stays zero-cost, so no paid APIs or required API keys (see [AGENTS.md](AGENTS.md) for the full constraints and an architecture overview if you're using an AI coding assistant). See [CHANGELOG.md](CHANGELOG.md) for a history of notable changes.
+
+### Releasing (maintainers)
+
+1. Bump `version` in `pyproject.toml` — it is what the in-app update alert compares against.
+2. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`.
+3. Merge to `main`, then tag the merged commit: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+4. The Docker Publish workflow checks the tag matches `pyproject.toml`, builds and pushes the multi-arch image, and only then publishes a GitHub Release with that version's changelog notes. Running apps pick it up within about a day.
+
+The full checklist (version bump with `uv lock`, PR, tagging `main`, verifying, and recovering from a failed run) is in [AGENTS.md → Release Process](AGENTS.md#release-process).
 
 ---
 

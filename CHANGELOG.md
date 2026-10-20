@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+- The Render-hosted "Live demo" and the README's **Deploy to Render** section. OpenSky blocks Render's datacenter IPs, so that demo often failed to load flights; the [GitHub Pages replay demo](https://dilshanonline.github.io/OpenFlightWall/demo/) replaces it. The underlying caveat (OpenSky blocks some cloud IPs) is kept as a general **Hosting in the cloud** note.
+
 ## [1.2.0] - 2026-10-20
 
 ### Added

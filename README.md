@@ -2,9 +2,7 @@
 
 A zero-cost local web dashboard that shows nearby flights in real time. Runs on your machine via a Python/Flask server — no paid subscriptions required.
 
-**[Live demo](https://openflightwall.onrender.com/)** — hosted free on Render. _(Occasionally shows a `500` fetching flights — see the [known limitation](#deploy-to-render-free-tier) below.)_
-
-**[Website & replay demo](https://dilshanonline.github.io/OpenFlightWall/)** — the project site, with a [demo](https://dilshanonline.github.io/OpenFlightWall/demo/) that runs the real dashboard in your browser on recorded flights (no install, no server).
+**[Try the demo](https://dilshanonline.github.io/OpenFlightWall/demo/)** · **[Project website](https://dilshanonline.github.io/OpenFlightWall/)** — the demo runs the real dashboard in your browser on recorded flights (no install, no server).
 
 **[Read the story](https://medium.com/@dilshanw/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31)** — how this project came to be, on Medium.
 
@@ -61,7 +59,7 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 > | | |
 > |---|---|
 > | **OpenSky rate limit** | Works keyless, but the anonymous limit is very low (you'll hit `429` quickly). A **free** OpenSky account raises it a lot — see [Configuration](#configuration). A 30 s server cache also helps. |
-> | **OpenSky blocks some cloud IPs entirely** | On some hosts (confirmed on Render), *all* connections to OpenSky — anonymous **and** authenticated — fail with a connection timeout, not a `429`. Credentials don't help in this case; see [Deploy to Render](#deploy-to-render-free-tier). |
+> | **OpenSky blocks some cloud IPs entirely** | From some cloud/datacenter hosts, *all* connections to OpenSky — anonymous **and** authenticated — fail with a connection timeout, not a `429`. Credentials don't help in this case; see [Hosting in the cloud](#hosting-in-the-cloud). |
 > | **Community data sources** | hexdb.io (aircraft type) and adsbdb.com (routes) are community-run with no SLA — some flights may show "Unknown aircraft" or "Route unavailable". |
 > | **On-ground aircraft included** | All transponders within radius are returned, including parked aircraft (use the *Hide ground* toggle). |
 
@@ -312,11 +310,9 @@ docker run -p 5050:5050 \
 - Tags: `latest` (newest release), plus semantic versions like `1.2.0`, `1.2`, `1` for pinning.
 - Runs behind [gunicorn](https://gunicorn.org/) in the image — the local `uv run python app.py` dev workflow above is unaffected and still uses Flask's own dev server.
 
-### Deploy to Render (free tier)
+### Hosting in the cloud
 
-The [live demo](https://openflightwall.onrender.com/) above is running exactly this setup:
-
-**Known limitation:** OpenSky Network appears to block outbound connections from Render's IP ranges at the network level — requests fail with a TCP connection timeout, not a clean `429`. This surfaces as a `500` from `/api/flights`. **Confirmed:** adding `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` (step 4 above) does **not** help — the authenticated request times out identically to the anonymous one, since the block happens before either request can even connect. It's an upstream/network restriction on Render's IP ranges, not an app bug or a credentials problem. If you hit this, hosting on a provider whose IPs aren't blocked (a non-datacenter connection, or a different cloud provider) is the only known workaround. This is open source — PRs improving on this are welcome.
+OpenFlightWall is meant to run on your own network — a laptop, home server or Raspberry Pi works best. If you host it with a cloud provider instead, be aware that OpenSky blocks outbound connections from some cloud/datacenter IP ranges at the network level: requests time out rather than returning a clean `429`, which shows up as a `500` from `/api/flights`. Adding OpenSky credentials does **not** help, because the block happens before any request connects. Check that your host can reach `opensky-network.org` before relying on it; a non-datacenter connection is the only known workaround. PRs improving on this are welcome.
 
 ---
 

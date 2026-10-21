@@ -1210,10 +1210,11 @@
     function planeIcon(f) {
       const heading = f.heading_deg || 0;
       const size = planeIconSize();
+      // The ✈ glyph points east (90°) unrotated, so subtract 90° to align it with the heading.
       return L.divIcon({
         className: '',
         html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''}"
-                    style="transform: rotate(${heading}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
+                    style="transform: rotate(${heading - 90}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });

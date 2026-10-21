@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-21
+
 ### Removed
 - The Render-hosted "Live demo" and the README's **Deploy to Render** section. OpenSky blocks Render's datacenter IPs, so that demo often failed to load flights; the [GitHub Pages replay demo](https://dilshanonline.github.io/OpenFlightWall/demo/) replaces it. The underlying caveat (OpenSky blocks some cloud IPs) is kept as a general **Hosting in the cloud** note.
+
+### Fixed
+- Plane icons on the map pointed 90° away from their real direction (for example, westbound planes faced north), because the ✈ symbol faces east before it is rotated. They now point the way each plane is flying.
 
 ## [1.2.0] - 2026-10-20
 

@@ -77,7 +77,6 @@ def main() -> None:
     shutil.copy2(SITE / "index.html", OUT / "index.html")
     shutil.copytree(ROOT / "docs" / "screenshots", OUT / "screenshots")
     build_demo(OUT / "demo")
-    (OUT / ".nojekyll").touch()   # serve files as-is, no Jekyll processing
     print(f"Built {OUT.relative_to(ROOT)}/: " + ", ".join(
         sorted(str(p.relative_to(OUT)) for p in OUT.rglob("*") if p.is_file() and p.suffix != ".png")))
     if args.serve:

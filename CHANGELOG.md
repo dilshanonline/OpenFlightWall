@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-26
+
+### Added
+- Wall mode shows the OpenFlightWall name in the bottom-right corner, at the end of the flight ticker.
+
 ## [1.2.1] - 2026-10-21
 
 ### Removed

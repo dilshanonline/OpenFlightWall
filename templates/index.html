@@ -592,7 +592,14 @@
     }
     .wall-empty { color: #8b949e; font-size: 1.1rem; }
     .wall-empty button { margin-top: 1rem; background: #1f6feb; border: none; color: #fff; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; }
-    .wall-ticker { border-top: 1px solid #21262d; background: #0d1117cc; overflow: hidden; white-space: nowrap; padding: 0.75rem 0; min-height: 2.9rem; }
+    .wall-ticker { position: relative; border-top: 1px solid #21262d; background: #0d1117cc; overflow: hidden; white-space: nowrap; padding: 0.75rem 0; min-height: 2.9rem; }
+    /* Wordmark pinned to the ticker's right end; ticker items fade out beneath it. */
+    .wall-brand {
+      position: absolute; top: 0; right: 0; bottom: 0; z-index: 1;
+      display: flex; align-items: center; padding: 0 1.5rem 0 3rem;
+      background: linear-gradient(to right, transparent, #0d1117 2.5rem);
+      font-size: 1rem; opacity: 0.85; pointer-events: none;
+    }
     /* Content is rendered twice; sliding by half the track loops seamlessly.
        padding-right matches the gap so both halves are exactly equal. */
     .wall-ticker-track { display: inline-flex; gap: 2.75rem; padding: 0 2.75rem 0 2rem; animation: ticker var(--ticker-s, 40s) linear infinite; }
@@ -799,7 +806,10 @@
       <div class="wall-plane" id="wall-plane"></div>
       <div class="wall-info" id="wall-info"></div>
     </div>
-    <div class="wall-ticker"><div class="wall-ticker-track" id="wall-ticker"></div></div>
+    <div class="wall-ticker">
+      <div class="wall-ticker-track" id="wall-ticker"></div>
+      <div class="logo wall-brand">✈ Open<span>Flight</span>Wall</div>
+    </div>
   </div>
 
   <!-- New-version notice (filled by checkForUpdate) -->

@@ -70,6 +70,7 @@ GitHub API         →  latest release / tags (update check only, cached 6 h, OF
 ## Route and position checks
 
 - `compute_progress()` sets `route_plausible: false` when going via the plane adds over 25% and over 100 km to the route. Progress fields are then `None`, and the UI shows "Route unverified" and draws no route line. Only `=== false` counts, since the demo and older data may omit it.
+- `compute_progress()` gives no ETA when more than `ETA_FAR_KM` (300) remains at under `ETA_MIN_CRUISE_KMH` (400), since speed then says nothing about arrival.
 - `fetch_state_vectors()` drops fixes older than `MAX_POSITION_AGE_S = 300` and exposes `position_age_s`; `renderMap()` uses it so the glide starts from when the position was measured.
 
 ## API Endpoints
@@ -190,6 +191,7 @@ Running apps notice the new release within about a day (server cache 6 h, browse
 - `site/index.html` — hand-written landing page (no framework). `site/demo.js` — replay engine + demo banner; sets `window.OFW_DEMO = {center, pollMs, flights(loc, radiusKm)}`, advancing airborne planes along their heading (6-minute loop) and recomputing distance/bearing. `site/snapshot.json` — the recording.
 - `site/build.py` (stdlib) writes `_site/` (git-ignored): copies the landing page and `docs/screenshots/`, and renders `templates/index.html` into `_site/demo/index.html` by replacing `{{ default_radius }}` and injecting the snapshot JSON + `demo.js` before the main `<script>`. It **fails loudly** if those anchors change. Preview with `python3 site/build.py --serve` (http://localhost:8000/); opening `site/index.html` directly shows no images and no demo, because those only exist in `_site/`.
 - **Demo hooks in `templates/index.html`** — `const DEMO = window.OFW_DEMO || null`; `POLL_MS` uses `DEMO.pollMs`; `start()` calls `startDemo()` (adds `body.demo`, sound/notifications off, no config/update/saved-location calls, `setLocation(DEMO.center…)`); `loadFlights()` takes `DEMO.flights(...)` instead of `/api/flights`. `body.demo` hides ⚙ (so Notify, Overhead alert, Save location, units and the watchlist too) and the credits badge. When editing `start()`/`loadFlights()`, keep these branches working and rebuild the site to check the demo.
+- **Screenshots** in `docs/screenshots/` are taken from the demo page so they only show sample routes. `notification.png` (a real macOS notification) and the article covers predate this.
 - Refresh the recording: run the dev server, then `python3 site/capture_snapshot.py [--lat --lon --radius --label]` (keeps airborne flights only and strips routes and flight numbers). Add hand-written sample callsigns and routes afterwards, with airport details not taken from adsbdb, and keep the demo banner's "samples" wording. See Hard Constraints.
 - `.github/workflows/pages.yml` builds and deploys on pushes to `main` touching `site/**`, `templates/index.html` or `docs/screenshots/**` (plus manual dispatch). Requires Settings → Pages → Source: **GitHub Actions** (one-time).
 

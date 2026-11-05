@@ -8,8 +8,13 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 ![OpenFlightWall Medium article cover](docs/screenshots/article-cover-1.png)
 
+The screenshots use the replay demo's sample callsigns and routes.
+
 **Card View:**
 ![Card View](docs/screenshots/card-view.png)
+
+**Table view:**
+![Table view](docs/screenshots/table-view.png)
 
 **Browser notification:**
 

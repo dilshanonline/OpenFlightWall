@@ -61,6 +61,7 @@ GitHub API         →  latest release / tags (update check only, cached 6 h, OF
 
 - `_cache` — full flight list, keyed by rounded (lat, lon, radius), `CACHE_TTL = 30` s. Protects the OpenSky rate limit (~1 req/10s).
 - `_route_cache` / `_aircraft_cache` — per-callsign / per-icao24, `ROUTE_CACHE_TTL = 3600` s.
+- `_type_cache` — hexdb.io type per icao24. Answers (including 404) use `ROUTE_CACHE_TTL`; failures use `TYPE_FAIL_TTL = 300` s.
 
 ## API Endpoints
 
@@ -107,7 +108,7 @@ Other backend facts:
 
 - **OpenSky rate limit** — anonymous is very low; the 30 s `_cache` and debounced radius help. `429` raises `OpenSkyRateLimit`; the API serves stale cache if available, else returns a friendly 429. Add OpenSky OAuth creds for a higher limit.
 - **hexdb.io / adsbdb.com** are community-run — may be slow or return nothing; UI falls back to ICAO code / "Route unavailable".
-- **On-ground aircraft** are included (Hide-ground toggle filters them client-side).
+- **On-ground aircraft** are included (Hide-ground toggle filters them client-side), except those with no callsign, which are often ground vehicles. Airborne aircraft with no callsign are kept and named by `displayId(f)` (callsign → registration → ICAO hex).
 
 ## Approach for Changes
 

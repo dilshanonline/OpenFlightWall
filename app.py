@@ -136,8 +136,10 @@ _cache: dict = {}
 # Flight routes and aircraft types rarely change, so cache them for much longer
 # (keyed by callsign / icao24) to avoid hammering the upstream free APIs.
 ROUTE_CACHE_TTL = 3600  # 1 hour
+TYPE_FAIL_TTL = 300     # failed type lookup: retry after 5 minutes
 _route_cache: dict = {}
 _aircraft_cache: dict = {}
+_type_cache: dict = {}
 
 
 class OpenSkyRateLimit(Exception):
@@ -253,11 +255,11 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
     Filters results to within radius_km of the centre point.
 
     OpenSky states array field indices:
-      0  icao24          4  spi             8  on_ground      12  sensors
+      0  icao24          4  last_contact    8  on_ground      12  sensors
       1  callsign        5  longitude       9  velocity       13  geo_altitude
       2  origin_country  6  latitude       10  true_track     14  squawk
-      3  time_position   7  baro_altitude  11  vertical_rate  15  position_source
-                                                              16  category
+      3  time_position   7  baro_altitude  11  vertical_rate  15  spi
+                                                              16  position_source
     """
     lat_min, lat_max, lon_min, lon_max = bounding_box(center_lat, center_lon, radius_km)
     url = (
@@ -314,6 +316,7 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
             "velocity_ms": s[9],
             "heading_deg": s[10],
             "vertical_rate": s[11],
+            "squawk": s[14] or "",
             "distance_km": round(dist, 1),
             "bearing_deg": round(bearing_deg(center_lat, center_lon, lat, lon), 1),
         })
@@ -325,16 +328,33 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
 # ---------------------------------------------------------------------------
 
 def get_aircraft_type(icao24: str) -> str:
-    """Return ICAO type code (e.g. 'B738') for the given ICAO24 hex, or ''."""
+    """
+    Return ICAO type code (e.g. 'B738') for the given ICAO24 hex, or ''.
+    Answers (including "not found") are cached for ROUTE_CACHE_TTL. Failures are
+    cached only for TYPE_FAIL_TTL, so an outage doesn't blank types for an hour.
+    """
     if not icao24:
         return ""
+
+    now = time.time()
+    cached = _type_cache.get(icao24)
+    if cached is not None and (now - cached["ts"]) < cached["ttl"]:
+        return cached["data"]
+
+    code = ""
+    ttl = TYPE_FAIL_TTL
     try:
         resp = requests.get(f"{HEXDB_BASE}/api/v1/aircraft/{icao24}", timeout=5)
         if resp.status_code == 200:
-            return resp.json().get("ICAOTypeCode", "") or ""
+            code = resp.json().get("ICAOTypeCode", "") or ""
+            ttl = ROUTE_CACHE_TTL
+        elif resp.status_code == 404:
+            ttl = ROUTE_CACHE_TTL
     except Exception:
         pass
-    return ""
+
+    _type_cache[icao24] = {"data": code, "ts": now, "ttl": ttl}
+    return code
 
 
 def extract_airline_icao(callsign: str) -> str:
@@ -488,7 +508,8 @@ def fetch_flights(center_lat: float, center_lon: float, radius_km: float) -> lis
     vectors = fetch_state_vectors(center_lat, center_lon, radius_km)
     flights = []
     for sv in vectors:
-        if not sv["callsign"]:
+        # No callsign on the ground is often a vehicle; in the air it's still a plane.
+        if not sv["callsign"] and sv["on_ground"]:
             continue
 
         aircraft_code = get_aircraft_type(sv["icao24"])

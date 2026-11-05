@@ -891,6 +891,18 @@
       return String.fromCodePoint(base + cc.charCodeAt(0) - 65, base + cc.charCodeAt(1) - 65);
     }
 
+    // Best available name for a flight; some airborne aircraft send no callsign.
+    function displayId(f) {
+      return f.callsign || f.registration || (f.icao24 || '').toUpperCase();
+    }
+
+    // Identifier line: "BAW123 · BA123", or the ICAO hex when there is no callsign
+    // (registration is shown separately, so this avoids printing it twice).
+    function flightIdText(f) {
+      const id = f.callsign || (f.icao24 || '').toUpperCase();
+      return f.flight_iata ? `${id} · ${f.flight_iata}` : id;
+    }
+
     // Apply the current filter + sort to the latest flights.
     function getVisibleFlights() {
       let list = latestFlights.slice();
@@ -997,13 +1009,12 @@
     }
 
     function renderCard(f) {
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || '—';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || null;
       const bearingLabel = f.bearing_deg != null
         ? `${compassLabel(f.bearing_deg)} ${f.bearing_deg}°` : null;
-      const idLine = f.flight_iata
-        ? `${esc(f.callsign || '—')} · ${esc(f.flight_iata)}`
-        : esc(f.callsign || '—');
+      const idLine = esc(flightIdText(f)) +
+        (f.squawk ? ` · <span title="Squawk code">Squawk ${esc(f.squawk)}</span>` : '');
       const speedCell = f.speed_kts != null
         ? `${Math.round(f.speed_kts)} kts<span class="stat-sub">${f.speed_kmh} km/h</span>`
         : '<span class="na">N/A</span>';
@@ -1051,8 +1062,8 @@
               <div class="stat-value">${statVal(f.distance_km, ' km', 1)}</div>
             </div>
             <div class="stat">
-              <div class="stat-label">${f.squawk ? 'Squawk' : 'Bearing'}</div>
-              <div class="stat-value">${f.squawk ? esc(f.squawk) : (bearingLabel ? esc(bearingLabel) : '<span class="na">N/A</span>')}</div>
+              <div class="stat-label">Bearing</div>
+              <div class="stat-value">${bearingLabel ? esc(bearingLabel) : '<span class="na">N/A</span>'}</div>
             </div>
           </div>
         </div>`;
@@ -1094,9 +1105,9 @@
         loadTailLogo(f, 'hero');
       }
 
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || '—';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
-      const idText = f.flight_iata ? `${f.callsign || ''} · ${f.flight_iata}` : (f.callsign || '');
+      const idText = flightIdText(f);
       const heroLogoHtml = f.airline_iata
         ? `<img class="hero-logo" src="${logoUrl(f.airline_iata)}" alt="${esc(airlineName)}" loading="lazy" onerror="this.style.display='none'">`
         : '';
@@ -1237,9 +1248,9 @@
     }
 
     function planePopupHtml(f) {
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || '—';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
-      const idText = f.flight_iata ? `${f.callsign || ''} · ${f.flight_iata}` : (f.callsign || '');
+      const idText = flightIdText(f);
       const regText = f.registration ? ` · ${f.registration}` : '';
       const oCode = (f.origin && (f.origin.iata || f.origin.icao)) || '???';
       const dCode = (f.destination && (f.destination.iata || f.destination.icao)) || '???';
@@ -1536,8 +1547,8 @@
 
     // Build a short label for a flight (airline / callsign + route).
     function flightLabel(f) {
-      const name = f.airline_name || f.airline_icao || f.callsign || 'Flight';
-      const id = f.flight_iata || f.callsign || '';
+      const name = f.airline_name || f.airline_icao || 'Flight';
+      const id = f.flight_iata || displayId(f);
       const o = f.origin && (f.origin.iata || f.origin.icao);
       const d = f.destination && (f.destination.iata || f.destination.icao);
       const route = (o || d) ? ` · ${o || '???'}→${d || '???'}` : '';
@@ -1631,9 +1642,9 @@
     // Title, route, progress and stat tiles for one flight. Shared by the
     // overhead alert and wall mode, which style it via :is(.overhead, .wall).
     function flightDetailHtml(f) {
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || 'A flight';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
-      const idText = f.flight_iata ? `${f.callsign || ''} · ${f.flight_iata}` : (f.callsign || '');
+      const idText = flightIdText(f);
       const logoHtml = f.airline_iata
         ? `<img class="hero-logo" src="${logoUrl(f.airline_iata)}" alt="" onerror="this.style.display='none'">` : '';
       const speedHtml = f.speed_kts != null

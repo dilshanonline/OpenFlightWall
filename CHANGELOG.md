@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Squawk codes now appear. The server was dropping them, so they never showed on cards or in the overhead alert.
+- Airborne aircraft that send no callsign are no longer hidden. They appear under their registration or ICAO code.
+- Aircraft type lookups are now cached, so each refresh makes far fewer calls to hexdb.io and is less affected when it is slow.
+
 ## [1.2.2] - 2026-10-26
 
 ### Added

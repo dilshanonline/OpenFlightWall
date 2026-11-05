@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-11-05
+
+### Added
+- **Full aircraft names.** Cards, the table, map popups, the flight banner, the overhead alert and wall mode now show names like Airbus A321neo and Boeing 747-8 instead of `A21N` and `B748`, for about 250 common types. Other types still show their code. Hover over a name on a card, popup or table row to see its code. Search finds both, and watchlist entries like `type:A388` still use the code.
+
 ## [1.2.3] - 2026-11-05
 
 ### Added

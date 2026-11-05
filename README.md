@@ -34,12 +34,12 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 - **Card & Map views** — a responsive flight-card grid, or a live Leaflet/OpenStreetMap map with rotated plane icons; click anywhere on the map to move your location.
 - **Livelier map** — a dark basemap by default (switch back to the standard map from the layer button; your choice is remembered), planes that glide smoothly between updates instead of jumping, a short trail behind each plane, and popups that stay open across refreshes.
-- **Vector aircraft art** — the overhead alert, Closest-flight banner and wall mode draw the aircraft with the **airline logo on its tail**, the airline name along the fuselage, and the nose pointing the way it is flying. The shape follows the aircraft type: jumbos (747/A380), wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops, light aircraft and helicopters.
+- **Vector aircraft art** — the overhead alert, flight banner and wall mode draw the aircraft with the **airline logo on its tail**, the airline name along the fuselage, and the nose pointing the way it is flying. The shape follows the aircraft type: jumbos (747/A380), wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops, light aircraft and helicopters.
 - **Origin → destination routes** — full airport names + country flags, plus great-circle route arcs on the map.
 - **Flight progress + ETA** — progress bar with km flown / remaining and a rough "lands in ~1h 23m" estimate (computed locally).
 - **Aircraft photos & details** — photo, registration, manufacturer and owner from adsbdb.com.
 - **Airline logos** — carrier logo on cards, hero banner and map popups (Kiwi.com public CDN).
-- **Closest-flight hero banner** — spotlights the nearest aircraft with its vector art, route and progress (the LED-wall vibe).
+- **Most-overhead hero banner** — spotlights the plane you are most likely to notice (low and heading towards you) with its vector art, route and progress (the LED-wall vibe).
 - **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with the aircraft art, route, progress and live stats. It **dismisses itself after 1 minute** by default, with a live "Dismiss in M:SS" countdown; pick 30s / 2 / 5 min, or **Stays open**, from the header.
 - **Wall mode** — a full-screen display for a TV, Raspberry Pi or spare monitor: a big clock, the nearest flights in turn with large aircraft art, and a scrolling ticker of everything else. It keeps the screen awake where the browser allows. Open it with the 🖥 button, or load `http://localhost:5050/?wall=1` (handy with a kiosk-mode browser); press Esc or ✕ to leave.
 - **Works on phones** — on narrow screens the header controls fold into a ☰ panel.
@@ -47,7 +47,10 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 - **New-version alert** — tells you when a newer release is out, with a link to what's new (in the browser, and in the console when you start the server). Turn it off with `OFW_UPDATE_CHECK=0`. See [Update notifications](#update-notifications).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
 - **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).
-- **Sort & filter** — sort by distance / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
+- **Table view** — every flight in a sortable table; click one to open it on the map.
+- **Search and filters** — search by callsign, registration, type, airline, airport or squawk, and filter by aircraft category, altitude and airline.
+- **Flight phase and units** — climbing, cruising, on approach and so on, with a choice of aviation, metric or mixed units and km, miles or nautical miles (⚙ Settings).
+- **Sort** — sort by distance / most overhead / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
 - **Climb/descent + squawk** — ▲/▼ vertical-rate indicator and transponder squawk code.
 - **Browser geolocation** — centres on you automatically, with a manual lat/lon entry and click-to-set fallback (no config file).
 - **Save location** — optional **Save location** checkbox in the header remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.

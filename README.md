@@ -43,6 +43,7 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 - **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with the aircraft art, route, progress and live stats. It **dismisses itself after 1 minute** by default, with a live "Dismiss in M:SS" countdown; pick 30s / 2 / 5 min, or **Stays open**, from the header.
 - **Wall mode** — a full-screen display for a TV, Raspberry Pi or spare monitor: a big clock, the nearest flights in turn with large aircraft art, and a scrolling ticker of everything else. It keeps the screen awake where the browser allows. Open it with the 🖥 button, or load `http://localhost:5050/?wall=1` (handy with a kiosk-mode browser); press Esc or ✕ to leave.
 - **Works on phones** — on narrow screens the header controls fold into a ☰ panel.
+- **Emergency and watchlist alerts** — a banner, sound and notification when a plane squawks 7500, 7600 or 7700, or matches your watchlist of callsigns, registrations, types or airlines
 - **New-version alert** — tells you when a newer release is out, with a link to what's new (in the browser, and in the console when you start the server). Turn it off with `OFW_UPDATE_CHECK=0`. See [Update notifications](#update-notifications).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
 - **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).

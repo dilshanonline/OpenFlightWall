@@ -639,6 +639,37 @@
     }
     .update-toast button:hover { color: #e6edf3; border-color: #8b949e; }
 
+    /* ── Special alerts (emergency squawks, watchlist) ── */
+    .alert-toast {
+      position: fixed; left: 50%; top: 1rem; transform: translateX(-50%);
+      z-index: 2500; width: min(560px, calc(100vw - 2rem));
+      display: none; align-items: flex-start; gap: 0.75rem;
+      background: #2d1214; border: 1px solid #f8514966; border-left: 3px solid #f85149;
+      border-radius: 10px; padding: 0.75rem 0.9rem;
+      box-shadow: 0 8px 28px #000a; font-size: 0.82rem; color: #e6edf3;
+    }
+    .alert-toast.show { display: flex; animation: fadein 0.3s ease; }
+    .alert-toast.watch-only { background: #161b22; border-color: #30363d; border-left-color: #58a6ff; }
+    .alert-toast ul { flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; }
+    .alert-toast li + li { margin-top: 0.35rem; }
+    .alert-toast .at-more { color: #8b949e; font-size: 0.72rem; }
+    .alert-toast button {
+      background: transparent; border: 1px solid #8b949e66; color: #e6edf3;
+      border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.72rem; cursor: pointer; flex-shrink: 0;
+    }
+    .badge-alert { background: #f8514926; color: #ff7b72; border: 1px solid #f8514966; }
+    .badge-watch { background: #58a6ff1f; color: #79c0ff; border: 1px solid #58a6ff4d; }
+    .card-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3rem; }
+    .plane-icon.emergency { color: #f85149; filter: drop-shadow(0 0 6px #f85149); }
+    .modal { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+    .modal-section { border-top: 1px solid #30363d; margin-top: 1rem; padding-top: 1rem; }
+    .modal-section-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.35rem; }
+    .modal-field textarea {
+      display: block; width: 100%; min-height: 5.5rem; margin-top: 0.3rem; padding: 0.45rem 0.6rem;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3;
+      font-family: 'Courier New', monospace; font-size: 0.8rem; resize: vertical; box-sizing: border-box;
+    }
+
     /* ── Manual location prompt ── */
     .loc-prompt {
       display: none;
@@ -833,6 +864,12 @@
     <button onclick="dismissUpdate()">Dismiss</button>
   </div>
 
+  <!-- Emergency squawk and watchlist alerts (filled by renderAlertToast) -->
+  <div class="alert-toast" id="alert-toast" role="alert">
+    <ul id="alert-list"></ul>
+    <button onclick="dismissAlerts()">Dismiss</button>
+  </div>
+
   <!-- OpenSky settings modal -->
   <div class="modal-overlay" id="settings-modal">
     <div class="modal">
@@ -857,6 +894,22 @@
         <button class="ctrl primary" onclick="saveConfig()" id="cfg-save">Save &amp; validate</button>
       </div>
       <div class="modal-note">Stored locally in plain text (git-ignored). Never leaves your machine.</div>
+      <div class="modal-section">
+        <div class="modal-section-title">Watchlist</div>
+        <p class="modal-desc">
+          Get an alert when a matching plane comes within your radius. One entry per line:
+          <code>callsign:BAW1</code>, <code>reg:G-XLEA</code>, <code>type:A388</code>,
+          <code>airline:EK</code>, or a plain value to match any of them.
+          Saved as you type, in this browser only.
+        </p>
+        <label class="modal-field">Entries
+          <textarea id="watchlist" spellcheck="false" autocapitalize="characters"
+                    oninput="onWatchlistChange(this.value)"></textarea>
+        </label>
+        <div class="modal-note" id="watchlist-note" hidden>
+          This browser is blocking site data, so the watchlist will be forgotten when you close the page.
+        </div>
+      </div>
       <div class="modal-about">
         Built by <a href="https://dilshanwijesooriya.me/" target="_blank" rel="noopener">Dilshan Wijesooriya</a>
         (<a href="https://github.com/dilshanonline" target="_blank" rel="noopener">GitHub</a>)<br>
@@ -1053,9 +1106,12 @@
                 <div class="callsign">${idLine}</div>
               </div>
             </div>
-            <span class="badge ${f.on_ground ? 'badge-ground' : 'badge-air'}">
-              ${f.on_ground ? 'Ground' : 'Airborne'}
-            </span>
+            <div class="card-badges">
+              ${alertBadgesHtml(f)}
+              <span class="badge ${f.on_ground ? 'badge-ground' : 'badge-air'}">
+                ${f.on_ground ? 'Ground' : 'Airborne'}
+              </span>
+            </div>
           </div>
 
           <div class="aircraft ${aircraftLabel ? '' : 'unknown'}">
@@ -1251,7 +1307,7 @@
       // The ✈ glyph points east (90°) unrotated, so subtract 90° to align it with the heading.
       return L.divIcon({
         className: '',
-        html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''}"
+        html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''} ${isEmergency(f) ? 'emergency' : ''}"
                     style="transform: rotate(${heading - 90}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
@@ -1260,7 +1316,7 @@
 
     // Only swap the icon when something visible changed, so it does not flicker.
     function updatePlaneIcon(m, force = false) {
-      const key = `${m.f.heading_deg || 0}|${m.f.on_ground}|${planeIconSize()}`;
+      const key = `${m.f.heading_deg || 0}|${m.f.on_ground}|${isEmergency(m.f)}|${planeIconSize()}`;
       if (force || key !== m.iconKey) { m.marker.setIcon(planeIcon(m.f)); m.iconKey = key; }
     }
 
@@ -1288,7 +1344,7 @@
 
       return `
         ${photoTag}
-        <b>${logoTag}${esc(airlineName)}</b><br>
+        <b>${logoTag}${esc(airlineName)}</b> ${alertBadgesHtml(f)}<br>
         ${esc(idText)}${esc(regText)} · ${esc(aircraftLabel)}<br>
         ${esc(routeText)}<br>
         ${statVal(f.altitude_ft, ' ft')} · ${esc(speedText)}${progText}
@@ -1581,20 +1637,156 @@
 
     // ── Sound alert on new flights ──
     let audioCtx = null;
-    function beep() {
+    function playTone(freq, delay = 0, length = 0.4) {
       if (!soundOn) return;
       try {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
+        const t = audioCtx.currentTime + delay;
         o.connect(g); g.connect(audioCtx.destination);
-        o.type = 'sine'; o.frequency.value = 880;
-        g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
-        o.start();
-        o.stop(audioCtx.currentTime + 0.4);
+        o.type = 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+        o.start(t);
+        o.stop(t + length);
       } catch (e) { /* ignore */ }
+    }
+    function beep() { playTone(880); }
+    // Two alternating notes, so an alert can't be mistaken for a new-flight ping.
+    function alertTone() {
+      [0, 0.3, 0.6, 0.9].forEach((delay, i) => playTone(i % 2 ? 660 : 990, delay, 0.28));
+    }
+
+    // ── Special alerts: emergency squawks and the personal watchlist ──
+    // These read latestFlights, like checkOverhead, so a display filter can never
+    // hide an emergency.
+    const ALERT_SQUAWKS = { 7500: 'Hijack', 7600: 'Radio failure', 7700: 'Emergency' };
+    const ALERT_REARM_MS = 30 * 60_000;   // alert again if it returns after this long
+    const LS_WATCHLIST = 'ofw:watchlist';
+    let watchlist = [];                   // parsed entries, see parseWatchlist()
+    const alertLastSeen = new Map();      // alert key → last poll it was true
+    const activeAlerts = new Map();       // alert key → { kind, text }, shown in the toast
+    const dismissedAlerts = new Set();    // keys the user closed while still true
+
+    const isEmergency = (f) => Boolean(ALERT_SQUAWKS[f.squawk]);
+
+    // "type:A388" → { field: 'type', value: 'A388', text }; a plain value has no field.
+    function parseWatchlist(text) {
+      return String(text || '').split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+        const m = line.match(/^(callsign|reg|type|airline):\s*(.+)$/i);
+        return {
+          field: m ? m[1].toLowerCase() : null,
+          value: (m ? m[2] : line).trim().toUpperCase(),
+          text: line,
+        };
+      });
+    }
+
+    function matchesWatchEntry(f, entry) {
+      const up = (v) => String(v || '').toUpperCase();
+      const v = entry.value;
+      const tests = {
+        // A prefix, so "BAW1" covers BAW123; registrations and types must match exactly.
+        callsign: () => up(f.callsign).startsWith(v) || up(f.flight_iata).startsWith(v),
+        reg: () => up(f.registration) === v,
+        type: () => up(f.aircraft_code) === v,
+        airline: () => up(f.airline_iata) === v || up(f.airline_icao) === v || up(f.airline_name).includes(v),
+      };
+      return entry.field ? tests[entry.field]() : Object.values(tests).some((test) => test());
+    }
+
+    const watchMatches = (f) => watchlist.filter((entry) => matchesWatchEntry(f, entry));
+
+    function alertBadgesHtml(f) {
+      const badges = [];
+      if (isEmergency(f)) {
+        badges.push(`<span class="badge badge-alert" title="Squawk ${esc(f.squawk)}">⚠ ${esc(ALERT_SQUAWKS[f.squawk])}</span>`);
+      }
+      if (watchMatches(f).length) badges.push('<span class="badge badge-watch">★ Watchlist</span>');
+      return badges.join(' ');
+    }
+
+    // Each reason a flight should alert right now.
+    function alertReasons(f) {
+      const reasons = watchMatches(f).map((entry) => ({
+        key: `${f.icao24}|watch:${entry.text}`, kind: 'watch', title: `Watchlist: ${entry.text}`,
+      }));
+      if (isEmergency(f)) {
+        reasons.unshift({
+          key: `${f.icao24}|squawk:${f.squawk}`, kind: 'squawk',
+          title: `${ALERT_SQUAWKS[f.squawk]} (squawk ${f.squawk})`,
+        });
+      }
+      return reasons;
+    }
+
+    // Fire each alert once per aircraft and reason. Keep it listed while it stays
+    // true, and only fire again if it went away for ALERT_REARM_MS.
+    function checkSpecialAlerts() {
+      const now = Date.now();
+      const current = new Map();
+      latestFlights.forEach((f) => alertReasons(f).forEach((r) => current.set(r.key, { ...r, f })));
+
+      const fresh = [];
+      current.forEach((alert, key) => {
+        const last = alertLastSeen.get(key);
+        if (last === undefined || now - last > ALERT_REARM_MS) {
+          fresh.push(alert);
+          dismissedAlerts.delete(key);
+        }
+        alertLastSeen.set(key, now);
+      });
+      alertLastSeen.forEach((last, key) => {
+        if (now - last > ALERT_REARM_MS) { alertLastSeen.delete(key); dismissedAlerts.delete(key); }
+      });
+
+      activeAlerts.clear();
+      current.forEach((alert, key) => {
+        if (!dismissedAlerts.has(key)) {
+          const dist = alert.f.distance_km != null ? ` · ${alert.f.distance_km} km away` : '';
+          activeAlerts.set(key, { kind: alert.kind, title: alert.title, text: flightLabel(alert.f) + dist });
+        }
+      });
+      renderAlertToast();
+
+      if (fresh.length) {
+        alertTone();
+        fresh.forEach((alert) => sendNotification(alert.title, flightLabel(alert.f),
+          alert.f.airline_iata ? logoUrl(alert.f.airline_iata) : undefined));
+      }
+    }
+
+    function renderAlertToast() {
+      const toast = document.getElementById('alert-toast');
+      const alerts = [...activeAlerts.values()].sort((a, b) => (a.kind === 'squawk' ? -1 : 0) - (b.kind === 'squawk' ? -1 : 0));
+      toast.classList.toggle('show', alerts.length > 0);
+      toast.classList.toggle('watch-only', alerts.every((a) => a.kind !== 'squawk'));
+      const MAX_SHOWN = 4;
+      document.getElementById('alert-list').innerHTML =
+        alerts.slice(0, MAX_SHOWN).map((a) => `<li><b>${a.kind === 'squawk' ? '⚠' : '★'} ${esc(a.title)}</b><br>${esc(a.text)}</li>`).join('')
+        + (alerts.length > MAX_SHOWN ? `<li class="at-more">and ${alerts.length - MAX_SHOWN} more</li>` : '');
+    }
+
+    function dismissAlerts() {
+      activeAlerts.forEach((_, key) => dismissedAlerts.add(key));
+      activeAlerts.clear();
+      renderAlertToast();
+    }
+
+    function initWatchlist() {
+      const saved = lsGet(LS_WATCHLIST) || '';
+      watchlist = parseWatchlist(saved);
+      document.getElementById('watchlist').value = saved;
+      document.getElementById('watchlist-note').hidden = storageAvailable();
+    }
+
+    function onWatchlistChange(text) {
+      watchlist = parseWatchlist(text);
+      lsSet(LS_WATCHLIST, text.trim() ? text : null);
+      checkSpecialAlerts();
+      refreshUI();   // badges on cards, popups and markers
     }
 
     function toggleSound() {
@@ -2132,6 +2324,7 @@
         if (DEMO) {
           latestFlights = DEMO.flights(userLocation, radiusKm);
           checkNewFlights();
+          checkSpecialAlerts();
           refreshUI();
           setStatus('ok', `Replaying recorded flights\nrefreshes every ${POLL_MS / 1000}s`);
           return;
@@ -2150,6 +2343,7 @@
 
         latestFlights = Array.isArray(data) ? data : [];
         checkNewFlights();
+        checkSpecialAlerts();
         refreshUI();
         loadConfig();   // update the OpenSky credits badge
 
@@ -2232,6 +2426,7 @@
       initNotify();
       loadConfig();
       initHideGround();
+      initWatchlist();
       initSavedLocation();
       checkForUpdate();
       // Re-check daily so pages left open for days (wall mode on a TV) still

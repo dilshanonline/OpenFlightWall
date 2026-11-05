@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Emergency alerts.** A plane in your radius squawking 7500 (hijack), 7600 (radio failure) or 7700 (emergency) now triggers a banner, a distinct two-tone sound and a browser notification, with a red badge on its card and map marker. Each alert fires once per aircraft and stays listed until the plane leaves or you dismiss it.
+- **Watchlist** in ⚙ Settings: get the same alert for a callsign, registration, aircraft type or airline, for example `type:A388` or `airline:EK`. It is stored only in your browser.
+
 ### Fixed
 - Squawk codes now appear. The server was dropping them, so they never showed on cards or in the overhead alert.
 - Airborne aircraft that send no callsign are no longer hidden. They appear under their registration or ICAO code.

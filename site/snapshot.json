@@ -604,6 +604,7 @@
    "altitude_m": 11567.16,
    "bearing_deg": 234.7,
    "callsign": "RYR9012",
+   "squawk": "7700",
    "destination": {
     "city": "Rome",
     "country": "Italy",

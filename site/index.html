@@ -269,7 +269,8 @@
         <div class="grid">
           <div class="tile"><b>🔔 Notifications &amp; sound</b><span>New flights, overhead only, or both.</span></div>
           <div class="tile"><b>↕ Sort your way</b><span>By distance, most overhead, altitude or airline; hide aircraft on the ground.</span></div>
-          <div class="tile"><b>📍 Your location stays yours</b><span>Detected in the browser and never sent anywhere; optionally remembered locally.</span></div>
+          <div class="tile"><b>📍 Location on your terms</b><span>Detected in your browser or typed in. Your own copy of the app uses it to ask OpenSky for nearby flights, and only your browser can remember it.</span></div>
+          <div class="tile"><b>✈ Full aircraft names</b><span>Airbus A321neo rather than A21N, for about 250 common types.</span></div>
           <div class="tile"><b>✨ Update alerts</b><span>A small notice when a new release is out, with what's new.</span></div>
           <div class="tile"><b>🐳 Docker image</b><span>Multi-arch (amd64 + arm64), so a Raspberry Pi works out of the box.</span></div>
           <div class="tile"><b>🛫 Flight phase &amp; squawk</b><span>Climbing, cruising or on approach, plus transponder codes at a glance.</span></div>
@@ -310,7 +311,8 @@
             <tbody>
               <tr><td>OpenSky Network</td><td>Live positions, callsign, altitude, speed, heading, squawk</td></tr>
               <tr><td>hexdb.io</td><td>Aircraft type from the transponder address</td></tr>
-              <tr><td>adsbdb.com</td><td>Route, flight number, airline, registration and aircraft photo</td></tr>
+              <tr><td>adsbdb.com</td><td>Route, flight number, airline and registration</td></tr>
+              <tr><td>airport-data.com</td><td>Aircraft photos, linked from adsbdb.com</td></tr>
               <tr><td>Kiwi.com</td><td>Airline logos</td></tr>
               <tr><td>OpenStreetMap</td><td>Map tiles</td></tr>
             </tbody>
@@ -318,7 +320,7 @@
         </div>
         <p class="note">
           OpenSky's anonymous limit is low. A <b>free</b> OpenSky account raises it a lot; add it from the ⚙ settings
-          panel, and the credentials never leave your machine.
+          panel. The credentials are stored on your machine and only sent to OpenSky.
         </p>
       </div>
     </section>

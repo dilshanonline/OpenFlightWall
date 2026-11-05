@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- The ⚙ Settings panel said OpenSky credentials never leave your machine. It now says they are stored on the machine running the app and only sent to OpenSky.
+
 ## [1.2.4] - 2026-11-05
 
 ### Added

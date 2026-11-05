@@ -33,34 +33,35 @@ The screenshots use the replay demo's sample callsigns and routes.
 
 <img src="docs/screenshots/mobile.png" width="375" alt="OpenFlightWall on a phone">
 
-**Keyless by default:** every data source works with no API key or account. The only optional setup is a **free** OpenSky account, which raises the flight-position rate limit (see [Configuration](#configuration)). Nothing here ever costs money, and if you do add credentials, they **never leave your machine** — everything runs locally, with no telemetry and no third-party server in between.
+**Keyless by default:** every data source works with no API key or account. The only optional setup is a **free** OpenSky account, which raises the flight-position rate limit (see [Configuration](#configuration)). Nothing here ever costs money. The app runs on your own machine with no telemetry and no OpenFlightWall server in between; any credentials you add are stored locally and only sent to OpenSky. See [Privacy](#privacy) for what each service sees.
 
 ## Features
 
-- **Card & Map views** — a responsive flight-card grid, or a live Leaflet/OpenStreetMap map with rotated plane icons; click anywhere on the map to move your location.
+- **Three views** — a responsive flight-card grid, a sortable table, or a live Leaflet/OpenStreetMap map with rotated plane icons; click anywhere on the map to move your location.
+- **Full aircraft names** — Airbus A321neo rather than `A21N`, for about 250 common types. Hover over a name on a card, popup or table row to see its code. Other types show the code.
 - **Livelier map** — a dark basemap by default (switch back to the standard map from the layer button; your choice is remembered), planes that glide smoothly between updates instead of jumping, a short trail behind each plane, and popups that stay open across refreshes.
 - **Vector aircraft art** — the overhead alert, flight banner and wall mode draw the aircraft with the **airline logo on its tail**, the airline name along the fuselage, and the nose pointing the way it is flying. The shape follows the aircraft type: jumbos (747/A380), wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops, light aircraft and helicopters.
-- **Origin → destination routes** — full airport names + country flags, plus great-circle route arcs on the map.
-- **Flight progress + ETA** — progress bar with km flown / remaining and a rough "lands in ~1h 23m" estimate (computed locally).
+- **Origin → destination routes** — full airport names + country flags, plus great-circle route arcs on the map. If a plane is far from the line between the listed airports, the route is marked **Route unverified**, with no progress, ETA or map line.
+- **Flight progress + ETA** — progress bar with km flown / remaining and a rough "lands in ~1h 23m" estimate (computed locally). There is no estimate when the plane is still slow with over 300 km to go, since its speed says little about arrival.
 - **Aircraft photos & details** — photo, registration, manufacturer and owner from adsbdb.com.
 - **Airline logos** — carrier logo on cards, hero banner and map popups (Kiwi.com public CDN).
 - **Most-overhead hero banner** — spotlights the plane you are most likely to notice (low and heading towards you) with its vector art, route and progress (the LED-wall vibe).
-- **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with the aircraft art, route, progress and live stats. It **dismisses itself after 1 minute** by default, with a live "Dismiss in M:SS" countdown; pick 30s / 2 / 5 min, or **Stays open**, from the header.
+- **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with the aircraft art, route, progress and live stats. It **dismisses itself after 1 minute** by default, with a live "Dismiss in M:SS" countdown; pick 30s / 2 / 5 min, or **Stays open**, in ⚙ Settings.
 - **Wall mode** — a full-screen display for a TV, Raspberry Pi or spare monitor: a big clock, the nearest flights in turn with large aircraft art, and a scrolling ticker of everything else. It keeps the screen awake where the browser allows. Open it with the 🖥 button, or load `http://localhost:5050/?wall=1` (handy with a kiosk-mode browser); press Esc or ✕ to leave.
 - **Works on phones** — on narrow screens the header controls fold into a ☰ panel.
-- **Emergency and watchlist alerts** — a banner, sound and notification when a plane squawks 7500, 7600 or 7700, or matches your watchlist of callsigns, registrations, types or airlines
+- **Emergency and watchlist alerts** — a banner, sound and notification when a plane squawks 7500, 7600 or 7700, or matches your [watchlist](#watchlist) of callsigns, registrations, types or airlines. Search and filters never hide an alert.
 - **New-version alert** — tells you when a newer release is out, with a link to what's new (in the browser, and in the console when you start the server). Turn it off with `OFW_UPDATE_CHECK=0`. See [Update notifications](#update-notifications).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
-- **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).
+- **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in ⚙ Settings).
 - **Readable map** — altitude colours with a legend, optional callsign labels, keep a plane centred, and an altitude chart in each popup.
 - **Keyboard shortcuts** — `/` search, `V` next view, `L` labels, `C` keep centred.
-- **Table view** — every flight in a sortable table; click one to open it on the map.
-- **Search and filters** — search by callsign, registration, type, airline, airport or squawk, and filter by aircraft category, altitude and airline.
+- **Table view** — click a column to sort (your choice is remembered), or a flight to open it on the map. On phones, the Reg, Heading and Squawk columns are hidden.
+- **Search and filters** — search by callsign, registration, type, airline, airport or squawk, and filter by aircraft category (airliners, business jets, turboprops, light aircraft, helicopters), altitude and airline. Filters are remembered and also apply to wall mode and the flight banner; search is temporary and only narrows the cards, table and map.
 - **Flight phase and units** — climbing, cruising, on approach and so on, with a choice of aviation, metric or mixed units and km, miles or nautical miles (⚙ Settings).
 - **Sort** — sort by distance / most overhead / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
 - **Climb/descent + squawk** — ▲/▼ vertical-rate indicator and transponder squawk code.
 - **Browser geolocation** — centres on you automatically, with a manual lat/lon entry and click-to-set fallback (no config file).
-- **Save location** — optional **Save location** checkbox in ⚙ Settings remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.
+- **Save location** — optional **Save location** checkbox in ⚙ Settings remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. The saved copy stays in the browser. The current location is still used to fetch flights (see [Privacy](#privacy)).
 - **Adjustable radius** — change the search radius live from the header.
 - **OpenSky account, in-app** — add optional free OpenSky credentials from a ⚙ Settings panel for a higher rate limit (validated live; no restart).
 - **Free bucket first** — when a key is set, the app uses the free anonymous quota first and only switches to your account key once the free quota is exhausted (maximising your total daily requests).
@@ -72,7 +73,8 @@ The screenshots use the replay demo's sample callsigns and routes.
 > | **OpenSky rate limit** | Works keyless, but the anonymous limit is very low (you'll hit `429` quickly). A **free** OpenSky account raises it a lot — see [Configuration](#configuration). A 30 s server cache also helps. |
 > | **OpenSky blocks some cloud IPs entirely** | From some cloud/datacenter hosts, *all* connections to OpenSky — anonymous **and** authenticated — fail with a connection timeout, not a `429`. Credentials don't help in this case; see [Hosting in the cloud](#hosting-in-the-cloud). |
 > | **Community data sources** | hexdb.io (aircraft type) and adsbdb.com (routes) are community-run with no SLA — some flights may show "Unknown aircraft" or "Route unavailable". |
-> | **On-ground aircraft included** | All transponders within radius are returned, including parked aircraft (use the *Hide ground* toggle). |
+> | **On-ground aircraft included** | Transponders within the radius are returned, including parked aircraft (use the *Hide ground* toggle). Ground traffic with no callsign is left out because it is often vehicles, and so is any position older than 5 minutes. |
+> | **Routes can be wrong** | adsbdb looks routes up by callsign, so a reused callsign can show the wrong airports. The *Route unverified* label catches the obvious cases, but it can also flag a correct route during a diversion or long detour. |
 
 ---
 
@@ -145,7 +147,13 @@ Location and radius are set in the browser (no config file needed):
 | Setting | Where | Notes |
 |---|---|---|
 | Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in ⚙ Settings to reuse it next time |
-| Search radius | Radius input in the header (default **10 km**) | Change it live; flights re-fetch immediately |
+| Search radius | Radius input in the header (default **10 km**) | Change it live; flights re-fetch immediately. Always in km, whichever units you choose |
+| Units | ⚙ Settings | Aviation (ft, kts), metric (m, km/h) or mixed (ft, km/h), plus km, miles or nautical miles |
+| Browser notifications | ⚙ Settings | Off, new flights, overhead only, or both (default) |
+| Overhead alert | ⚙ Settings | Stays open, or dismisses after 30 s, 1 min (default), 2 min or 5 min |
+| Watchlist | ⚙ Settings | See [Watchlist](#watchlist) |
+| Sound | 🔔 button in the header | On by default; browsers need one click on the page before the first ping |
+| Filters, sort, Hide ground | Header | Filters and Hide ground are remembered in this browser |
 
 The only server-side settings are optional environment variables (or a `.env` file — see `.env.example`):
 
@@ -155,6 +163,21 @@ The only server-side settings are optional environment variables (or a `.env` fi
 | `OFW_UPDATE_CHECK` | `1` | Set to `0` to never ask GitHub whether a newer release exists |
 | `OFW_DATA_DIR` | next to `app.py` (`/data` in Docker) | Folder for credentials saved from ⚙ Settings |
 | `FLASK_DEBUG` | unset | Set to `1` for Flask's debugger and auto-reload, for development only |
+| `PORT` | `5050` | Docker image only: the port the container listens on. `python app.py` always uses 5050 |
+
+### Watchlist
+
+Add one entry per line in ⚙ Settings to get the same banner, sound and notification as an emergency when a matching plane enters your radius:
+
+| Entry | Matches |
+|---|---|
+| `callsign:BAW1` | Callsigns or flight numbers starting with `BAW1` |
+| `reg:G-XLEA` | That registration |
+| `type:A388` | That ICAO type code (the code, not the full name) |
+| `airline:EK` | That airline code, or an airline name containing the text |
+| `G-XLEA` | A plain value matches any of the above |
+
+Each alert fires once per plane, and again only if the plane has been gone for 30 minutes. The list is stored in your browser only.
 
 ### Update notifications
 
@@ -203,15 +226,32 @@ Restart the server; it prints `OpenSky access: authenticated (OAuth)` on startup
 
 ## Data Sources
 
-All sources are **free**. Only OpenSky optionally uses a (free) account for a higher rate limit; everything else is keyless.
+All sources are **free**. The server contacts OpenSky, hexdb.io, adsbdb.com and GitHub; your browser loads the images, map and map library directly. Only OpenSky optionally uses a (free) account for a higher rate limit; everything else is keyless.
 
 | Source | What it provides | URL |
 |---|---|---|
 | OpenSky Network | Real-time ADS-B positions, callsign, altitude, speed, heading | `opensky-network.org/api/states/all` |
-| hexdb.io | Aircraft type code (e.g. `B738`) from ICAO24 hex | `hexdb.io/api/v1/aircraft/{icao24}` |
+| hexdb.io | Aircraft type code (e.g. `B738`) from ICAO24 hex; adsbdb.com is the fallback | `hexdb.io/api/v1/aircraft/{icao24}` |
 | adsbdb.com | Flight route + IATA flight number + airline telephony; and aircraft registration/owner/manufacturer/**photo** | `api.adsbdb.com/v0/callsign/{callsign}`, `.../v0/aircraft/{icao24}` |
 | Kiwi.com images | Airline logos by 2-letter IATA code | `images.kiwi.com/airlines/64/{IATA}.png` |
+| airport-data.com | Aircraft photos, linked from adsbdb.com's records | `image.airport-data.com` |
+| OpenStreetMap | Map tiles | `tile.openstreetmap.org` |
+| unpkg | The Leaflet map library | `unpkg.com/leaflet@1.9.4` |
 | GitHub API | Latest release, for the new-version alert (cached 6 h; opt out with `OFW_UPDATE_CHECK=0`) | `api.github.com/repos/dilshanonline/OpenFlightWall/releases/latest` |
+
+### Privacy
+
+There are no accounts, analytics or telemetry, but the app does need to ask these services for data, and each one sees your IP address:
+
+| Service | What it receives |
+|---|---|
+| OpenSky | An area box centred on your location, plus your credentials if you added any |
+| hexdb.io, adsbdb.com | The aircraft hex codes and callsigns near you |
+| GitHub | Your running version, unless `OFW_UPDATE_CHECK=0` |
+| OpenStreetMap | The map tiles for the area you view |
+| Kiwi.com, airport-data.com, unpkg | Requests for logos, photos and the map library |
+
+Your location goes from the browser to your own OpenFlightWall server on each refresh. The app doesn't save it there, though `python app.py` prints each request, including the coordinates, to its console. Credentials saved from ⚙ Settings are stored in plain text on that server.
 
 ---
 
@@ -219,17 +259,19 @@ All sources are **free**. Only OpenSky optionally uses a (free) account for a hi
 
 | Field | Source | Notes |
 |---|---|---|
-| Airline name | ICAO callsign prefix | Shown as-is (e.g. `UAL`) |
+| Airline name | adsbdb.com | Full name when known; otherwise the first letters of the callsign (e.g. `UAL`), which can look odd for private planes |
 | Airline logo | Kiwi.com CDN | Shown by IATA code; hidden if none exists |
 | Callsign + flight number | OpenSky + adsbdb.com | e.g. `ACA850 · AC850` (IATA flight number shown when known) |
 | Aircraft type | hexdb.io + built-in names | Full name for common types (e.g. `B738` shows as Boeing 737-800), otherwise the ICAO type code |
 | Origin → Destination | adsbdb.com | Airport codes + city + country flag; "Route unavailable" if unknown |
 | Flight progress + ETA | Computed | Progress bar, km flown/remaining, rough "lands in ~" estimate (great-circle, constant speed) |
 | Aircraft photo & registration | adsbdb.com | Photo banner + registration/owner/manufacturer where available |
-| Altitude | OpenSky | Barometric altitude in feet, with ▲/▼ climb/descent indicator |
-| Speed | OpenSky | Ground speed in knots **and** km/h |
-| Distance | Computed | Haversine distance from your centre point |
-| Bearing / Squawk | Computed / OpenSky | Direction from you (e.g. `NE 42°`); squawk shown when reported |
+| Altitude | OpenSky | Barometric altitude in your chosen units, with ▲/▼ climb/descent indicator |
+| Speed | OpenSky | Ground speed in your chosen units |
+| Flight phase | Computed | Climbing, cruising, level, descending, on approach or on ground |
+| Distance | Computed | Haversine distance from your centre point, in your chosen units |
+| Bearing | Computed | Direction from you (e.g. `NE 42°`) |
+| Squawk | OpenSky | Transponder code, shown when reported |
 | Airborne / Ground | OpenSky | `on_ground` flag from ADS-B transponder |
 
 ---
@@ -241,8 +283,15 @@ OpenFlightWall/
 ├── app.py              # Flask server + full data pipeline
 ├── pyproject.toml      # Project metadata and dependencies
 ├── uv.lock             # Reproducible dependency lockfile
-└── templates/
-    └── index.html      # Single-file frontend (vanilla HTML/CSS/JS + Leaflet)
+├── Dockerfile          # Image published to Docker Hub
+├── .env.example        # Template for optional settings
+├── CHANGELOG.md        # Release history
+├── AGENTS.md           # Architecture notes and project rules
+├── templates/
+│   ├── index.html      # Frontend (vanilla HTML/CSS/JS + Leaflet)
+│   └── aircraft_names.js  # Type code → full name table, included into index.html
+├── site/               # Project website and replay demo (GitHub Pages)
+└── docs/screenshots/   # Images used here and on the website
 ```
 
 ---
@@ -257,7 +306,7 @@ OpenFlightWall/
           ┌──────────────┬──────────┼──────────────┐
           ▼              ▼          ▼              ▼
     OpenSky anon     hexdb.io   adsbdb.com     (Haversine
-  (state vectors) (aircraft)   (route O/D)   distance/bearing)
+  (state vectors) (aircraft) (route, photo) distance/bearing)
           │              │          │              │
           └──────────────┴──────────┴──────────────┘
                                      │
@@ -287,12 +336,21 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 - hexdb.io / adsbdb.com don't have every registration or callsign — this is expected and harmless
 - Private/military/GA aircraft often have no public route records
 
+**A route says "Route unverified"**
+- The plane is far from the line between its listed airports, so the callsign may have been reused and the route may be wrong. It can also appear during a diversion or long detour.
+
+**An aircraft shows a code rather than a full name**
+- That type isn't in the name table yet. Add it to `templates/aircraft_names.js`; PRs are welcome.
+
+**Saved OpenSky credentials are gone after updating the Docker container**
+- Run the container with a volume so they survive being replaced: `-v openflightwall-data:/data`
+
 **Location not detected / map shows the wrong place**
 - A prompt will appear to enter your latitude/longitude manually
 - Or open the **Map** view and click anywhere to drop your location
 - macOS: enable **System Settings → Privacy & Security → Location Services** for your browser
 - If you clicked *Block*, re-allow location via the 🔒/ⓘ icon in the address bar
-- Use `http://localhost:5050` (not a LAN IP) — geolocation needs a secure context
+- Use `http://localhost:5050` (not a LAN IP) — geolocation needs a secure context. On another device, such as a wall screen, enter the location manually and tick **Save location**
 
 **Browser notifications not appearing**
 - A ⚠ in the header, repeated beside **Browser notifications** in ⚙ Settings, names whichever layer is blocking — hover it

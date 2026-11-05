@@ -29,7 +29,8 @@ LABEL org.opencontainers.image.title="OpenFlightWall" \
       org.opencontainers.image.source="https://github.com/dilshanonline/OpenFlightWall" \
       org.opencontainers.image.licenses="Apache-2.0"
 
-RUN groupadd --system app && useradd --system --gid app --no-create-home app
+RUN groupadd --system app && useradd --system --gid app --no-create-home app \
+    && mkdir /data && chown app:app /data
 
 WORKDIR /app
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
@@ -38,12 +39,16 @@ COPY --chown=app:app templates/ ./templates/
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     PORT=5050 \
+    OFW_DATA_DIR=/data \
     PYTHONUNBUFFERED=1
 
 USER app
 EXPOSE 5050
+# Credentials saved from the UI live here; mount a named volume to keep them.
+VOLUME ["/data"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/api/config', timeout=3)" || exit 1
 
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 30 app:app"]
+# One worker: credentials, caches and rate-limit state live in process memory.
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 8 --timeout 30 app:app"]

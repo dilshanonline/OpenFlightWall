@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-11-05
+
+### Added
+- **Emergency alerts.** A plane in your radius squawking 7500 (hijack), 7600 (radio failure) or 7700 (emergency) now triggers a banner, a distinct two-tone sound and a browser notification, with a red badge on its card and map marker. Each alert fires once per aircraft and stays listed until the plane leaves or you dismiss it.
+- **Table view**, next to Cards and Map: every flight in one sortable table. Click a column to sort, or a flight to open it on the map.
+- **Search** across callsign, flight number, registration, type, airline, airport and squawk, always available in the header. It narrows the cards, table and map, but never wall mode or alerts.
+- **Filters** for aircraft category, altitude and airline, behind a Filters button. They are remembered, and also apply to wall mode and the flight banner. Alerts still fire for planes they hide.
+- **Flight phase** labels: climbing, cruising, level, descending, on approach, on ground.
+- **Units** in ⚙ Settings: aviation (ft, kts), metric (m, km/h) or mixed (ft, km/h), plus kilometres, miles or nautical miles.
+- **Altitude colours on the map:** planes and trails run from pale blue (low) to deep blue (high), with a legend. Red now only ever means an emergency, and planes on the ground are grey.
+- **Callsign labels on the map**, switched on with the **Aa** button.
+- **Keep centred:** a popup button that keeps the map on one plane while it stays in your radius. Dragging the map, Esc or ✕ stops it.
+- **Altitude chart** in map popups, showing how a plane's altitude has changed while you've been watching.
+- **Keyboard shortcuts:** `/` search, `V` next view, `L` labels, `C` keep centred. They are listed in ⚙ Settings.
+- **Watchlist** in ⚙ Settings: get the same alert for a callsign, registration, aircraft type or airline, for example `type:A388` or `airline:EK`. It is stored only in your browser.
+
+### Fixed
+- Squawk codes now appear. The server was dropping them, so they never showed on cards or in the overhead alert.
+- Airborne aircraft that send no callsign are no longer hidden. They appear under their registration or ICAO code.
+- Aircraft type lookups are now cached, so each refresh makes far fewer calls to hexdb.io and is less affected when it is slow.
+- **Docker:** credentials saved in ⚙ Settings now reach every request and are written to `/data`. The image used to run two separate server processes, so a saved or cleared credential could apply to only one of them. Mount a volume at `/data` to keep credentials when the container is replaced. If they can't be saved, ⚙ Settings now says so instead of reporting success.
+- Routes that can't be right, such as a plane far off the line between its listed airports, now show **Route unverified**, with no progress bar, ETA or map line.
+- Positions OpenSky hasn't updated for over 5 minutes are ignored, and the map's smooth motion allows for how old each position is.
+- Long-running servers no longer keep old cached lookups forever.
+- Planes still climbing with a long way to go no longer show absurd arrival estimates such as "59h". The estimate appears once the plane is near cruising speed or close to landing, and long estimates no longer crowd the text under the progress bar.
+- On phones the header no longer wraps onto a third row; OpenSky credits show in ⚙ Settings there.
+- **Docker:** `docker stop` now shuts the server down straight away.
+
+### Changed
+- Map trails now build up in every view, and survive switching views or searching, instead of starting again each time.
+- The banner above the cards now features the **most overhead** plane rather than simply the closest, favouring planes that are low and heading towards you. Sort has a matching "Most overhead" option.
+- **Notify, Overhead alert and Save location moved to ⚙ Settings**, which keeps the header on one line. A ⚠ still appears in the header if notifications are blocked. Search stays visible on every screen size. Below 1470 px the status text hides, leaving the status dot and its tooltip.
+- The first load of an area is faster, because aircraft are looked up in parallel (up to 4 at a time). Several open tabs now share one data fetch.
+- `python app.py` no longer starts Flask's debugger or auto-reload. Set `FLASK_DEBUG=1` to turn them on for development.
+- Aircraft photos now credit airport-data.com, and the page has a favicon and a description.
+- The replay demo keeps its recorded aircraft positions but now uses sample callsigns and routes. The real app still shows live routes.
+
 ## [1.2.2] - 2026-10-26
 
 ### Added

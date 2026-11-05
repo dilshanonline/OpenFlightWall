@@ -174,7 +174,7 @@
         </div>
         <a class="small-link" href="#story">Read how it started →</a>
         <img class="hero-shot" src="screenshots/wall-mode.png" width="1920" height="1200"
-             alt="OpenFlightWall wall mode: a large clock, a Cathay Pacific 777 drawn with its logo on the tail, its route from Hong Kong to London and live stats">
+             alt="OpenFlightWall wall mode: a large clock, a British Airways A320 drawn with its logo on the tail, a sample route from Zurich to London and live stats">
       </div>
     </div>
 
@@ -196,12 +196,13 @@
               heading. It closes itself after a minute, or stays open if you prefer.
             </p>
             <ul>
+              <li>Emergency squawks and your own watchlist trigger their own alert</li>
               <li>Optional browser notifications and a sound ping for new flights</li>
               <li>Plane art matches the type: jumbos, wide-bodies, regional jets, turboprops, helicopters…</li>
             </ul>
           </div>
           <img src="screenshots/overhead-alert.png" width="1920" height="1200" loading="lazy"
-               alt="Full-screen overhead alert for a Cathay Pacific Boeing 777 with route, progress bar and stat tiles">
+               alt="Full-screen overhead alert for a British Airways A320 with a sample route, progress bar and stat tiles">
         </div>
 
         <div class="feature flip">
@@ -209,15 +210,36 @@
             <h3>A live map that moves</h3>
             <p>
               A dark map with every plane rotated to its heading, gliding smoothly between updates and trailing
-              its recent path. Click a plane for its photo and details and its great-circle route; click the map
-              to move your location.
+              its recent path. Click a plane for its photo, details, great-circle route and an altitude chart;
+              click the map to move your location.
             </p>
+            <ul>
+              <li>Altitude colours from pale blue (low) to deep blue (high), with red kept for emergencies</li>
+              <li>Optional callsign labels, and a button to keep one plane centred</li>
+            </ul>
           </div>
           <img src="screenshots/map-view.png" width="1920" height="1200" loading="lazy"
-               alt="Dark map of London with plane icons, short trails and a popup showing a Cathay Pacific 777">
+               alt="Dark map of London with altitude-coloured planes, callsign labels, trails, a legend and a popup with an altitude chart">
         </div>
 
         <div class="feature">
+          <div class="feature-text">
+            <h3>Every flight in one table</h3>
+            <p>
+              A sortable table shows type, registration, route, flight phase, altitude, vertical rate, speed,
+              distance, heading and squawk for everything in range. Click a flight to open it on the map.
+            </p>
+            <ul>
+              <li>Search by callsign, registration, type, airline, airport or squawk</li>
+              <li>Filter by aircraft category, altitude and airline</li>
+              <li>Aviation, metric or mixed units, and km, miles or nautical miles</li>
+            </ul>
+          </div>
+          <img src="screenshots/table-view.png" width="1920" height="1200" loading="lazy"
+               alt="Table of nearby flights sorted by distance, with one flight marked as an emergency">
+        </div>
+
+        <div class="feature flip">
           <div class="feature-text">
             <h3>Wall mode for a TV or Raspberry Pi</h3>
             <p>
@@ -232,25 +254,26 @@
                alt="Wall mode with a large clock, featured flight and scrolling ticker">
         </div>
 
-        <div class="feature flip">
+        <div class="feature">
           <div class="feature-text">
             <h3>Cards, a spotlight, and your phone</h3>
             <p>
-              Every flight gets a card with its photo, airline logo, route, progress and ETA, and the closest one
-              gets a spotlight banner. On a phone the controls fold into a menu so it works in your pocket too.
+              Every flight gets a card with its photo, airline logo, route, progress and ETA, and the plane you're
+              most likely to notice, low and heading your way, gets a spotlight banner. On a phone the controls fold into a menu so it works in your pocket too.
             </p>
           </div>
           <img class="phone" src="screenshots/mobile.png" width="750" height="1500" loading="lazy"
-               alt="OpenFlightWall on a phone, showing the Closest flight banner and a flight card">
+               alt="OpenFlightWall on a phone, showing the flight banner and a flight card">
         </div>
 
         <div class="grid">
           <div class="tile"><b>🔔 Notifications &amp; sound</b><span>New flights, overhead only, or both.</span></div>
-          <div class="tile"><b>↕ Sort &amp; filter</b><span>By distance, altitude or airline; hide aircraft on the ground.</span></div>
+          <div class="tile"><b>↕ Sort your way</b><span>By distance, most overhead, altitude or airline; hide aircraft on the ground.</span></div>
           <div class="tile"><b>📍 Your location stays yours</b><span>Detected in the browser and never sent anywhere; optionally remembered locally.</span></div>
           <div class="tile"><b>✨ Update alerts</b><span>A small notice when a new release is out, with what's new.</span></div>
           <div class="tile"><b>🐳 Docker image</b><span>Multi-arch (amd64 + arm64), so a Raspberry Pi works out of the box.</span></div>
-          <div class="tile"><b>🛫 Climb, descent &amp; squawk</b><span>Vertical-rate arrows and transponder codes at a glance.</span></div>
+          <div class="tile"><b>🛫 Flight phase &amp; squawk</b><span>Climbing, cruising or on approach, plus transponder codes at a glance.</span></div>
+          <div class="tile"><b>⌨ Keyboard shortcuts</b><span>Search, switch views, toggle labels and keep a plane centred from the keyboard.</span></div>
         </div>
       </div>
     </section>

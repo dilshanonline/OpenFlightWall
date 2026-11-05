@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenFlightWall</title>
+  <meta name="description" content="A free, open-source dashboard showing the planes flying near you: flight cards, a live map and a wall display.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✈️%3C/text%3E%3C/svg%3E">
 
   <!-- Leaflet (free, OpenStreetMap) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -162,7 +164,39 @@
       color: #58a6ff;
       text-shadow: 0 0 3px #000, 0 0 6px #000;
     }
-    .plane-icon.ground { color: #f0883e; }
+    .plane-icon.ground { color: #8b949e; }
+    .plane-label {
+      background: #0d1117d9; border: 1px solid #30363d; border-radius: 4px; box-shadow: none;
+      color: #e6edf3; font-size: 0.68rem; padding: 0 0.3rem;
+    }
+    .plane-label::before { display: none; }
+    .map-legend {
+      background: #0d1117e6; border: 1px solid #30363d; border-radius: 6px; padding: 0.35rem 0.5rem;
+      color: #c9d1d9; font-size: 0.68rem; line-height: 1.5;
+    }
+    .map-legend div { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+    .map-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .map-legend b { color: #8b949e; font-weight: 600; }
+    .map-btn.active { background: #1f6feb; color: #fff; }
+    .centred-chip {
+      display: flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.5rem; border-radius: 6px;
+      background: #1f6feb; color: #fff; font-size: 0.72rem;
+    }
+    .centred-chip[hidden] { display: none; }
+    .centred-chip button { background: none; border: 0; color: inherit; cursor: pointer; padding: 0; font-size: 0.8rem; }
+    .popup-btn {
+      margin-top: 0.4rem; padding: 0.2rem 0.55rem; border-radius: 6px; cursor: pointer;
+      background: #21262d; border: 1px solid #30363d; color: #e6edf3; font-size: 0.72rem;
+    }
+    .popup-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .alt-chart { margin-top: 0.4rem; }
+    .alt-chart svg { display: block; width: 100%; height: 44px; overflow: visible; }
+    .alt-chart-caption { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.68rem; color: #8b949e; }
+    .shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.6rem; font-size: 0.78rem; color: #8b949e; }
+    .shortcuts kbd {
+      justify-self: start; padding: 0 0.35rem; border: 1px solid #30363d; border-radius: 4px;
+      background: #0d1117; color: #e6edf3; font-family: inherit; font-size: 0.72rem;
+    }
 
     /* Leaflet "locate me" button */
     .locate-btn {
@@ -284,7 +318,16 @@
       height: 130px;
       background: #0d1117 center/cover no-repeat;
       border-bottom: 1px solid #30363d;
+      position: relative;
     }
+    .photo-credit { font-size: 0.65rem; color: #8b949e; text-decoration: none; }
+    .photo-credit:hover { text-decoration: underline; }
+    .card-photo .photo-credit {
+      position: absolute; right: 0.3rem; bottom: 0.3rem;
+      padding: 0.05rem 0.35rem; border-radius: 4px;
+      background: #000a; color: #e6edf3;
+    }
+    .route-note { color: #f0883e; font-size: 0.72rem; text-align: center; margin-top: 0.3rem; }
 
     /* ── Registration & climb/descent ── */
     .reg {
@@ -320,7 +363,7 @@
       font-size: 0.7rem; color: #58a6ff;
     }
     .progress-meta {
-      display: flex; justify-content: space-between;
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 0.6rem;
       font-size: 0.64rem; color: #8b949e;
     }
     .progress-eta { color: #58a6ff; font-weight: 600; }
@@ -360,12 +403,66 @@
     }
     .controls label {
       display: flex; align-items: center; gap: 0.35rem;
-      color: #8b949e; cursor: pointer; user-select: none;
+      color: #8b949e; cursor: pointer; user-select: none; white-space: nowrap;
     }
     .controls .ctrl.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
     .ctrl-row { display: contents; }
+    #search {
+      flex: 0 1 9rem; min-width: 5rem; box-sizing: border-box; background: #161b22; border: 1px solid #30363d; color: #e6edf3;
+      border-radius: 6px; padding: 0.32rem 0.55rem; font-size: 0.75rem;
+    }
+    .controls .ctrl.has-filters { border-color: #58a6ff; color: #79c0ff; }
+    .filters-wrap { position: relative; }
+    .filters-pop {
+      position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 600; width: 260px;
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 0.85rem;
+      box-shadow: 0 14px 28px #000a; font-size: 0.78rem; color: #8b949e;
+    }
+    .filters-pop[hidden] { display: none; }
+    .filters-pop fieldset { border: 0; margin: 0 0 0.7rem; padding: 0; }
+    .filters-pop legend { padding: 0; margin-bottom: 0.35rem; color: #e6edf3; font-weight: 600; }
+    .filters-pop .f-classes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.5rem; }
+    .filters-pop .f-range { display: flex; align-items: center; gap: 0.4rem; }
+    .filters-pop input[type="number"], .filters-pop input[type="text"] {
+      width: 100%; min-width: 0; box-sizing: border-box; background: #0d1117; border: 1px solid #30363d;
+      color: #e6edf3; border-radius: 6px; padding: 0.3rem 0.45rem; font-size: 0.75rem;
+    }
+    .phase {
+      display: inline-block; padding: 0.05rem 0.4rem; border-radius: 999px; white-space: nowrap;
+      font-size: 0.65rem; color: #c9d1d9; background: #30363d80; border: 1px solid #30363d;
+    }
+    .aircraft .phase { margin-left: 0.4rem; }
+    .empty button {
+      margin-top: 0.75rem; background: #21262d; border: 1px solid #30363d; color: #e6edf3;
+      border-radius: 6px; padding: 0.35rem 0.8rem; font-size: 0.8rem; cursor: pointer;
+    }
+
+    /* ── Table view ── */
+    #table-view { display: none; }
+    main.table-mode #table-view { display: block; }
+    main.table-mode #cards-view { display: none; }
+    .table-wrap { overflow-x: auto; border: 1px solid #30363d; border-radius: 10px; background: #161b22; }
+    .flight-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; white-space: nowrap; }
+    .flight-table th { position: sticky; top: 0; background: #1c2128; text-align: left; padding: 0; }
+    .flight-table th button {
+      width: 100%; padding: 0.55rem 0.7rem; text-align: left; cursor: pointer;
+      background: none; border: 0; color: #8b949e; font: inherit; font-weight: 600;
+    }
+    .flight-table th button:hover { color: #e6edf3; }
+    .flight-table th[aria-sort="ascending"] button::after { content: " ▲"; color: #58a6ff; }
+    .flight-table th[aria-sort="descending"] button::after { content: " ▼"; color: #58a6ff; }
+    .flight-table td { padding: 0.5rem 0.7rem; border-top: 1px solid #21262d; color: #e6edf3; }
+    .flight-table tr:hover td { background: #1c2128; }
+    .flight-table .t-num { font-variant-numeric: tabular-nums; }
+    .flight-table .t-open {
+      background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 600; color: #58a6ff;
+    }
+    .flight-table .t-open:hover { text-decoration: underline; }
+    .flight-table img { height: 18px; width: auto; vertical-align: middle; margin-right: 0.4rem; border-radius: 3px; background: #fff; padding: 1px 3px; }
+    .flight-table .t-alert { color: #ff7b72; font-weight: 700; }
+    @media (max-width: 600px) { .flight-table .t-hide-sm { display: none; } }
     /* Replay demo: hide what needs the real server or stores personal data. */
-    body.demo #settings-btn, body.demo label:has(#save-loc), body.demo #credits { display: none; }   /* only groups the buttons in the narrow panel */
+    body.demo #settings-btn, body.demo #credits { display: none; }   /* only groups the buttons in the narrow panel */
 
     .flag { font-size: 0.95em; }
 
@@ -628,6 +725,46 @@
     }
     .update-toast button:hover { color: #e6edf3; border-color: #8b949e; }
 
+    /* ── Special alerts (emergency squawks, watchlist) ── */
+    .alert-toast {
+      /* Below the header, so it never covers the controls. */
+      position: fixed; left: 50%; top: calc(var(--header-h, 4rem) + 0.5rem); transform: translateX(-50%);
+      z-index: 2500; width: min(560px, calc(100vw - 2rem));
+      display: none; align-items: flex-start; gap: 0.75rem;
+      background: #2d1214; border: 1px solid #f8514966; border-left: 3px solid #f85149;
+      border-radius: 10px; padding: 0.75rem 0.9rem;
+      box-shadow: 0 8px 28px #000a; font-size: 0.82rem; color: #e6edf3;
+    }
+    .alert-toast.show { display: flex; animation: fadein 0.3s ease; }
+    body.wall-mode .alert-toast { top: 1rem; }
+    .alert-toast.watch-only { background: #161b22; border-color: #30363d; border-left-color: #58a6ff; }
+    .alert-toast ul { flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; }
+    .alert-toast li + li { margin-top: 0.35rem; }
+    .alert-toast .at-more { color: #8b949e; font-size: 0.72rem; }
+    .alert-toast button {
+      background: transparent; border: 1px solid #8b949e66; color: #e6edf3;
+      border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.72rem; cursor: pointer; flex-shrink: 0;
+    }
+    .badge-alert { background: #f8514926; color: #ff7b72; border: 1px solid #f8514966; }
+    .badge-watch { background: #58a6ff1f; color: #79c0ff; border: 1px solid #58a6ff4d; }
+    .card-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3rem; }
+    .plane-icon.emergency { color: #f85149; filter: drop-shadow(0 0 6px #f85149); }
+    .modal { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+    .modal-section { border-top: 1px solid #30363d; margin-top: 1rem; padding-top: 1rem; }
+    .modal-section.first { border-top: 0; margin-top: 0; padding-top: 0.25rem; }
+    .modal-check { display: flex; align-items: flex-start; gap: 0.45rem; font-size: 0.78rem; color: #8b949e; cursor: pointer; }
+    .modal-warn { color: #d29922; margin: -0.35rem 0 0.75rem; }
+    .modal-section-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.35rem; }
+    .modal-field select {
+      display: block; width: 100%; margin-top: 0.3rem; padding: 0.4rem 0.5rem; background: #0d1117;
+      border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 0.8rem;
+    }
+    .modal-field textarea {
+      display: block; width: 100%; min-height: 5.5rem; margin-top: 0.3rem; padding: 0.45rem 0.6rem;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3;
+      font-family: 'Courier New', monospace; font-size: 0.8rem; resize: vertical; box-sizing: border-box;
+    }
+
     /* ── Manual location prompt ── */
     .loc-prompt {
       display: none;
@@ -662,7 +799,9 @@
     .empty code { background: #161b22; border-radius: 4px; padding: 0.1rem 0.4rem; font-size: 0.82rem; color: #8b949e; }
 
     /* ── Narrow screens: controls fold into a drop-down panel ── */
-    @media (max-width: 1320px) {
+    /* The status text needs the most room; the dot and its tooltip stay. */
+    @media (max-width: 1470px) { #status-text { display: none; } }
+    @media (max-width: 1330px) {
       header { padding: 0.75rem 1rem; gap: 0.75rem; }
       .controls-btn { display: block; }
       .controls {
@@ -674,6 +813,10 @@
       }
       .controls.open { display: grid; }
       .controls label { font-size: 0.8rem; }
+      header { flex-wrap: nowrap; }
+      #search { margin-right: auto; }
+      .filters-wrap { grid-column: 1 / -1; }
+      .filters-pop { position: static; width: auto; margin-top: 0.5rem; box-shadow: none; }
       .ctrl-row { display: flex; gap: 0.5rem; }
       .controls .ctrl { font-size: 0.9rem; }
       #status-text { display: none; }
@@ -681,7 +824,13 @@
     @media (max-width: 600px) {
       main { padding: 1rem; }
       .logo { font-size: 1rem; }
-      .toggle button { padding: 0.35rem 0.6rem; }
+      .logo { font-size: 0.85rem; letter-spacing: 0; }
+      .toggle button { padding: 0.3rem 0.4rem; font-size: 0.72rem; }
+      header { flex-wrap: wrap; gap: 0.5rem; }
+      #credits { display: none; }   /* also shown in ⚙, and it would wrap the header here */
+      @media (max-width: 380px) { .logo { font-size: 0.72rem; } }
+      /* Search gets its own full-width row under the logo and buttons. */
+      #search { order: 5; flex: 1 1 100%; margin-right: 0; font-size: 0.9rem; }
       .controls { grid-template-columns: 1fr; }
       .hero { padding: 1rem; }
       .hero-stats { margin-left: 0; width: 100%; justify-content: space-around; }
@@ -701,9 +850,35 @@
     <div class="logo">✈ Open<span>Flight</span>Wall</div>
     <div class="toggle">
       <button id="btn-cards" class="active" onclick="setView('cards')">Cards</button>
+      <button id="btn-table" onclick="setView('table')">Table</button>
       <button id="btn-map" onclick="setView('map')">Map</button>
     </div>
+    <input id="search" type="search" placeholder="Search flights" aria-label="Search flights"
+           title="Callsign, flight number, registration, type, airline, airport or squawk"
+           oninput="onSearchInput(this.value)">
     <div class="controls" id="controls">
+      <div class="filters-wrap" id="filters-wrap">
+        <button id="filters-btn" class="ctrl" onclick="toggleFilters()" aria-expanded="false" aria-controls="filters-pop">Filters</button>
+        <div class="filters-pop" id="filters-pop" hidden>
+          <fieldset>
+            <legend>Aircraft</legend>
+            <div class="f-classes" id="f-classes"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Altitude (<span id="f-alt-unit">ft</span>)</legend>
+            <div class="f-range">
+              <input id="f-alt-min" type="number" min="0" placeholder="Min" aria-label="Minimum altitude" oninput="onFiltersChange()">
+              <span>to</span>
+              <input id="f-alt-max" type="number" min="0" placeholder="Max" aria-label="Maximum altitude" oninput="onFiltersChange()">
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Airline</legend>
+            <input id="f-airline" type="text" placeholder="Name or code" aria-label="Airline name or code" oninput="onFiltersChange()">
+          </fieldset>
+          <button class="ctrl" onclick="clearFilters()">Clear filters</button>
+        </div>
+      </div>
       <label>Radius
         <input id="radius" type="number" min="1" max="250" step="1"
                onchange="onRadiusChange(this.value)" style="width: 3.6rem;"> km
@@ -711,34 +886,16 @@
       <label>Sort
         <select id="sort" onchange="onSortChange(this.value)" title="Sort flights">
           <option value="distance">Distance</option>
+          <option value="overhead">Most overhead</option>
           <option value="altitude">Altitude</option>
           <option value="airline">Airline</option>
         </select>
       </label>
       <label><input id="hide-ground" type="checkbox" onchange="onHideGround(this.checked)"> Hide ground</label>
-      <label><input id="save-loc" type="checkbox" onchange="onSaveLocation(this.checked)"
-                    title="Remember this location in this browser and reuse it next time instead of re-detecting"> Save location</label>
-      <label>Notify
-        <select id="notify" onchange="onNotifyChange(this.value)" title="Browser notifications">
-          <option value="off">Off</option>
-          <option value="new">New flights</option>
-          <option value="overhead">Overhead only</option>
-          <option value="both" selected>Both</option>
-        </select>
-        <span id="notify-warn" class="notify-warn" hidden></span>
-      </label>
-      <label>Overhead alert
-        <select id="auto-dismiss" onchange="onAutoDismissChange(this.value)" title="Automatically dismiss the full-screen overhead alert after a set time">
-          <option value="0">Stays open</option>
-          <option value="30">Dismiss in 30s</option>
-          <option value="60" selected>Dismiss in 1 min</option>
-          <option value="120">Dismiss in 2 min</option>
-          <option value="300">Dismiss in 5 min</option>
-        </select>
-      </label>
       <div class="ctrl-row">
+        <span id="notify-warn" class="notify-warn" hidden></span>
         <button id="sound-btn" class="ctrl active" onclick="toggleSound()" title="Ping when a new flight enters your radius">🔔</button>
-        <button id="settings-btn" class="ctrl" onclick="openSettings()" title="OpenSky account (higher rate limit)">⚙</button>
+        <button id="settings-btn" class="ctrl" onclick="openSettings()" title="Settings">⚙</button>
         <button id="wall-btn" class="ctrl" onclick="toggleWall(true, true)" title="Wall mode — full-screen display for a TV or spare screen (also ?wall=1)">🖥</button>
       </div>
     </div>
@@ -771,6 +928,7 @@
     <div id="cards-view">
       <div class="grid" id="grid"></div>
     </div>
+    <div id="table-view"></div>
     <div id="map"></div>
   </main>
 
@@ -822,10 +980,43 @@
     <button onclick="dismissUpdate()">Dismiss</button>
   </div>
 
+  <!-- Emergency squawk and watchlist alerts (filled by renderAlertToast) -->
+  <div class="alert-toast" id="alert-toast" role="alert">
+    <ul id="alert-list"></ul>
+    <button onclick="dismissAlerts()">Dismiss</button>
+  </div>
+
   <!-- OpenSky settings modal -->
   <div class="modal-overlay" id="settings-modal">
     <div class="modal">
-      <div class="modal-title">OpenSky account</div>
+      <div class="modal-title">Settings</div>
+      <div class="modal-section first">
+        <div class="modal-section-title">Alerts and location</div>
+        <label class="modal-field">Browser notifications
+          <select id="notify" onchange="onNotifyChange(this.value)">
+            <option value="off">Off</option>
+            <option value="new">New flights</option>
+            <option value="overhead">Overhead only</option>
+            <option value="both" selected>Both</option>
+          </select>
+        </label>
+        <div class="modal-note modal-warn" id="notify-warn-text" hidden></div>
+        <label class="modal-field">Overhead alert
+          <select id="auto-dismiss" onchange="onAutoDismissChange(this.value)">
+            <option value="0">Stays open</option>
+            <option value="30">Dismiss in 30s</option>
+            <option value="60" selected>Dismiss in 1 min</option>
+            <option value="120">Dismiss in 2 min</option>
+            <option value="300">Dismiss in 5 min</option>
+          </select>
+        </label>
+        <label class="modal-check">
+          <input id="save-loc" type="checkbox" onchange="onSaveLocation(this.checked)">
+          <span>Save location: remember it in this browser and reuse it next time</span>
+        </label>
+      </div>
+      <div class="modal-section">
+      <div class="modal-section-title">OpenSky account</div>
       <p class="modal-desc">
         The app is <b>keyless by default</b> but the anonymous rate limit is very low.
         Add a <b>free</b> <a href="https://opensky-network.org/" target="_blank" rel="noopener">OpenSky</a>
@@ -842,10 +1033,53 @@
       <div class="modal-actions">
         <button class="ctrl" onclick="clearConfig()" id="cfg-clear">Clear</button>
         <span style="flex:1"></span>
-        <button class="ctrl" onclick="closeSettings()">Cancel</button>
+        <button class="ctrl" onclick="closeSettings()">Close</button>
         <button class="ctrl primary" onclick="saveConfig()" id="cfg-save">Save &amp; validate</button>
       </div>
       <div class="modal-note">Stored locally in plain text (git-ignored). Never leaves your machine.</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Units</div>
+        <label class="modal-field">Altitude and speed
+          <select id="unit-system" onchange="onUnitsChange()">
+            <option value="aviation">Aviation (ft, kts)</option>
+            <option value="metric">Metric (m, km/h)</option>
+            <option value="mixed">Mixed (ft, km/h)</option>
+          </select>
+        </label>
+        <label class="modal-field">Distance
+          <select id="unit-distance" onchange="onUnitsChange()">
+            <option value="km">Kilometres</option>
+            <option value="mi">Miles</option>
+            <option value="NM">Nautical miles</option>
+          </select>
+        </label>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Watchlist</div>
+        <p class="modal-desc">
+          Get an alert when a matching plane comes within your radius. One entry per line:
+          <code>callsign:BAW1</code>, <code>reg:G-XLEA</code>, <code>type:A388</code>,
+          <code>airline:EK</code>, or a plain value to match any of them.
+          Saved as you type, in this browser only.
+        </p>
+        <label class="modal-field">Entries
+          <textarea id="watchlist" spellcheck="false" autocapitalize="characters"
+                    oninput="onWatchlistChange(this.value)"></textarea>
+        </label>
+        <div class="modal-note" id="watchlist-note" hidden>
+          This browser is blocking site data, so the watchlist will be forgotten when you close the page.
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Keyboard shortcuts</div>
+        <div class="shortcuts">
+          <kbd>/</kbd><span>Search flights</span>
+          <kbd>V</kbd><span>Next view</span>
+          <kbd>L</kbd><span>Map labels on or off</span>
+          <kbd>C</kbd><span>Keep the selected plane centred on the map</span>
+        </div>
+      </div>
       <div class="modal-about">
         Built by <a href="https://dilshanwijesooriya.me/" target="_blank" rel="noopener">Dilshan Wijesooriya</a>
         (<a href="https://github.com/dilshanonline" target="_blank" rel="noopener">GitHub</a>)<br>
@@ -891,22 +1125,246 @@
       return String.fromCodePoint(base + cc.charCodeAt(0) - 65, base + cc.charCodeAt(1) - 65);
     }
 
+    // Best available name for a flight; some airborne aircraft send no callsign.
+    function displayId(f) {
+      return f.callsign || f.registration || (f.icao24 || '').toUpperCase();
+    }
+
+    // Identifier line: "BAW123 · BA123", or the ICAO hex when there is no callsign
+    // (registration is shown separately, so this avoids printing it twice).
+    function flightIdText(f) {
+      const id = f.callsign || (f.icao24 || '').toUpperCase();
+      return f.flight_iata ? `${id} · ${f.flight_iata}` : id;
+    }
+
+    // ── Units ── Everything displayed goes through these; the API stays in ft, kts and km.
+    const LS_UNITS = 'ofw:units';
+    const FT_PER_M = 3.28084, KM_PER_UNIT = { km: 1, mi: 1.609344, NM: 1.852 };
+    let units = { system: 'aviation', distance: 'km' };
+
+    const altUnit = () => (units.system === 'metric' ? 'm' : 'ft');
+    const altNum = (ft) => Math.round(altUnit() === 'm' ? ft / FT_PER_M : ft);
+    const fmtAlt = (ft) => (ft == null ? null : `${altNum(ft)} ${altUnit()}`);
+    const speedUnit = () => (units.system === 'aviation' ? 'kts' : 'km/h');
+    const speedNum = (f) => (units.system === 'aviation' ? Math.round(f.speed_kts) : f.speed_kmh);
+    const fmtSpeed = (f) => (f.speed_kts == null ? null : `${speedNum(f)} ${speedUnit()}`);
+    // The other speed unit, shown smaller beside the main one.
+    const fmtSpeedAlt = (f) => (units.system === 'aviation' ? `${f.speed_kmh} km/h` : `${Math.round(f.speed_kts)} kts`);
+    const distUnit = () => units.distance;
+    const distNum = (km, decimals = 1) => Number((km / KM_PER_UNIT[units.distance]).toFixed(decimals));
+    const fmtDist = (km, decimals = 1) => (km == null ? null : `${distNum(km, decimals)} ${distUnit()}`);
+    // vertical_rate is m/s. Rounded to 10 ft/min, which is all ADS-B data can justify.
+    function fmtVRate(ms) {
+      if (ms == null) return null;
+      const sign = ms > 0 ? '+' : '';
+      return units.system === 'metric'
+        ? `${sign}${ms.toFixed(1)} m/s`
+        : `${sign}${Math.round(ms * FT_PER_M * 60 / 10) * 10} ft/min`;
+    }
+    const naHtml = (text) => (text == null ? '<span class="na">N/A</span>' : esc(text));
+
+    function initUnits() {
+      try {
+        const saved = JSON.parse(lsGet(LS_UNITS));
+        if (saved && ['aviation', 'metric', 'mixed'].includes(saved.system)) units.system = saved.system;
+        if (saved && KM_PER_UNIT[saved.distance]) units.distance = saved.distance;
+      } catch { /* malformed: keep the defaults */ }
+      document.getElementById('unit-system').value = units.system;
+      document.getElementById('unit-distance').value = units.distance;
+      syncFilterInputs();
+    }
+
+    function onUnitsChange() {
+      units = {
+        system: document.getElementById('unit-system').value,
+        distance: document.getElementById('unit-distance').value,
+      };
+      lsSet(LS_UNITS, JSON.stringify(units));
+      syncFilterInputs();
+      refreshUI();
+    }
+
+    // ── Filters ── Saved, and they apply everywhere flights are listed, wall mode included.
+    const LS_FILTERS = 'ofw:filters';
+    const FILTER_GROUPS = [
+      { id: 'airliner', label: 'Airliners', classes: ['quad', 'wide', 'narrow', 'rearjet'] },
+      { id: 'bizjet', label: 'Business jets', classes: ['bizjet'] },
+      { id: 'turboprop', label: 'Turboprops', classes: ['turboprop'] },
+      { id: 'light', label: 'Light aircraft', classes: ['light'] },
+      { id: 'heli', label: 'Helicopters', classes: ['heli'] },
+      { id: 'unknown', label: 'Unknown', classes: [] },
+    ];
+    const NO_FILTERS = () => ({ hidden: [], altMinFt: null, altMaxFt: null, airline: '' });
+    let filters = NO_FILTERS();
+
+    function filterGroup(f) {
+      if (!f.aircraft_code) return 'unknown';
+      const cls = aircraftClass(f.aircraft_code);
+      return FILTER_GROUPS.find((g) => g.classes.includes(cls)).id;
+    }
+
+    function passesFilters(f) {
+      if (filters.hidden.includes(filterGroup(f))) return false;
+      if (filters.altMinFt != null || filters.altMaxFt != null) {
+        const alt = f.on_ground ? 0 : f.altitude_ft;
+        if (alt == null) return false;
+        if (filters.altMinFt != null && alt < filters.altMinFt) return false;
+        if (filters.altMaxFt != null && alt > filters.altMaxFt) return false;
+      }
+      if (filters.airline) {
+        const q = filters.airline.toUpperCase();
+        const code = (v) => (v || '').toUpperCase() === q;
+        if (!code(f.airline_iata) && !code(f.airline_icao)
+            && !(f.airline_name || '').toUpperCase().includes(q)) return false;
+      }
+      return true;
+    }
+
+    const activeFilterCount = () => [
+      filters.hidden.length > 0, filters.altMinFt != null || filters.altMaxFt != null, Boolean(filters.airline),
+    ].filter(Boolean).length;
+
+    function updateFiltersButton() {
+      const n = activeFilterCount();
+      const btn = document.getElementById('filters-btn');
+      btn.textContent = n ? `Filters (${n})` : 'Filters';
+      btn.classList.toggle('has-filters', n > 0);
+    }
+
+    function syncFilterInputs() {
+      document.getElementById('f-classes').innerHTML = FILTER_GROUPS.map((g) => `
+        <label><input type="checkbox" data-group="${g.id}" onchange="onFiltersChange()"
+          ${filters.hidden.includes(g.id) ? '' : 'checked'}> ${g.label}</label>`).join('');
+      document.getElementById('f-alt-unit').textContent = altUnit();
+      const show = (ft) => (ft == null ? '' : altNum(ft));
+      document.getElementById('f-alt-min').value = show(filters.altMinFt);
+      document.getElementById('f-alt-max').value = show(filters.altMaxFt);
+      document.getElementById('f-airline').value = filters.airline;
+      updateFiltersButton();
+    }
+
+    function onFiltersChange() {
+      const toFt = (id) => {
+        const raw = document.getElementById(id).value.trim();
+        const n = Number(raw);
+        if (raw === '' || !Number.isFinite(n)) return null;
+        return altUnit() === 'm' ? n * FT_PER_M : n;
+      };
+      filters = {
+        hidden: [...document.querySelectorAll('#f-classes input')].filter((c) => !c.checked).map((c) => c.dataset.group),
+        altMinFt: toFt('f-alt-min'),
+        altMaxFt: toFt('f-alt-max'),
+        airline: document.getElementById('f-airline').value.trim(),
+      };
+      lsSet(LS_FILTERS, activeFilterCount() ? JSON.stringify(filters) : null);
+      updateFiltersButton();
+      refreshUI();
+    }
+
+    function clearFilters() {
+      filters = NO_FILTERS();
+      lsSet(LS_FILTERS, null);
+      syncFilterInputs();
+      refreshUI();
+    }
+
+    function initFilters() {
+      try {
+        const saved = JSON.parse(lsGet(LS_FILTERS));
+        if (saved) {
+          const num = (v) => (Number.isFinite(v) ? v : null);
+          filters = {
+            hidden: Array.isArray(saved.hidden) ? saved.hidden.filter((id) => FILTER_GROUPS.some((g) => g.id === id)) : [],
+            altMinFt: num(saved.altMinFt),
+            altMaxFt: num(saved.altMaxFt),
+            airline: typeof saved.airline === 'string' ? saved.airline : '',
+          };
+        }
+      } catch { /* malformed: start with no filters */ }
+      syncFilterInputs();
+    }
+
+    function toggleFilters(force) {
+      const pop = document.getElementById('filters-pop');
+      const open = force ?? pop.hidden;
+      pop.hidden = !open;
+      document.getElementById('filters-btn').setAttribute('aria-expanded', String(open));
+    }
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('filters-wrap').contains(e.target)) toggleFilters(false);
+    });
+
+    // ── Search ── Temporary, and only narrows the list views: wall mode, the hero
+    // and alerts all ignore it.
+    let searchQuery = '';
+
+    function matchesSearch(f) {
+      const q = searchQuery.trim().toUpperCase();
+      if (!q) return true;
+      const airport = (a) => (a ? [a.iata, a.icao, a.city] : []);
+      return [
+        f.callsign, f.flight_iata, f.registration, f.aircraft_code, f.airline_name,
+        f.airline_icao, f.airline_iata, f.icao24, f.squawk, ...airport(f.origin), ...airport(f.destination),
+      ].some((v) => (v || '').toUpperCase().includes(q));
+    }
+
+    function onSearchInput(value) {
+      searchQuery = value;
+      refreshUI();
+    }
+
+    function clearSearchAndFilters() {
+      searchQuery = '';
+      document.getElementById('search').value = '';
+      clearFilters();
+    }
+
+    const getListedFlights = () => getVisibleFlights().filter(matchesSearch);
+
+    // ── Flight phase and overhead score ──
+    // vertical_rate is m/s, so 2.5 is about 500 ft/min.
+    function flightPhase(f) {
+      if (f.on_ground) return 'On ground';
+      const vr = f.vertical_rate ?? 0;
+      if (vr > 2.5) return 'Climbing';
+      if (vr < -2.5) return f.altitude_ft != null && f.altitude_ft < 4000 ? 'On approach' : 'Descending';
+      return f.altitude_ft > 20000 ? 'Cruising' : 'Level';
+    }
+    const phaseChip = (f) => `<span class="phase">${flightPhase(f)}</span>`;
+
+    // Lower is better: the plane you would actually notice, which is low and
+    // coming towards you, even if another one is slightly closer.
+    function overheadScore(f) {
+      if (f.distance_km == null) return Infinity;
+      if (f.on_ground) return 1e6 + f.distance_km;
+      let score = f.distance_km + (f.altitude_ft ?? 0) / 10000;
+      if (f.heading_deg != null && f.bearing_deg != null) {
+        const toUser = (f.bearing_deg + 180) % 360;
+        const off = Math.abs(((f.heading_deg - toUser + 540) % 360) - 180);
+        if (off < 60) score *= 0.7;
+        else if (off > 120) score *= 1.2;
+      }
+      return score;
+    }
+
     // Apply the current filter + sort to the latest flights.
     function getVisibleFlights() {
       let list = latestFlights.slice();
       if (hideGround) list = list.filter((f) => !f.on_ground);
+      list = list.filter(passesFilters);
       const cmp = {
         distance: (a, b) => (a.distance_km ?? 1e9) - (b.distance_km ?? 1e9),
+        overhead: (a, b) => overheadScore(a) - overheadScore(b),
         altitude: (a, b) => (b.altitude_ft ?? -1) - (a.altitude_ft ?? -1),
         airline:  (a, b) => (a.airline_name || a.callsign || '').localeCompare(b.airline_name || b.callsign || ''),
       }[sortBy];
       return list.sort(cmp);
     }
 
-    function closestFlight() {
+    function mostOverheadFlight() {
       return getVisibleFlights()
         .filter((f) => f.distance_km != null)
-        .sort((a, b) => a.distance_km - b.distance_km)[0] || null;
+        .sort((a, b) => overheadScore(a) - overheadScore(b))[0] || null;
     }
 
     // Leaflet objects
@@ -927,13 +1385,10 @@
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    function statVal(val, unit = '', decimals = 0) {
-      if (val === null || val === undefined) return '<span class="na">N/A</span>';
-      const num = typeof decimals === 'number' ? Number(val).toFixed(decimals) : val;
-      return esc(num + unit);
-    }
-
     /* ────────────── Card rendering ────────────── */
+
+    // adsbdb's aircraft photos come from airport-data.com.
+    const PHOTO_CREDIT = '<a class="photo-credit" href="https://www.airport-data.com/" target="_blank" rel="noopener">Photo: airport-data.com</a>';
 
     function renderRoute(f) {
       if (!f.origin && !f.destination) {
@@ -950,7 +1405,10 @@
           ${airport(f.origin)}
           <span class="route-arrow">✈</span>
           ${airport(f.destination)}
-        </div>`;
+        </div>
+        ${f.route_plausible === false
+          ? '<div class="route-note" title="This plane is far from the line between these airports, so the listed route may be wrong.">Route unverified</div>'
+          : ''}`;
     }
 
     // Climbing / descending / level indicator from vertical rate (m/s).
@@ -989,27 +1447,26 @@
             <div class="progress-plane" style="left: ${f.progress_pct}%">✈</div>
           </div>
           <div class="progress-meta">
-            <span>${f.travelled_km != null ? f.travelled_km + ' km flown' : ''}</span>
+            <span>${f.travelled_km != null ? fmtDist(f.travelled_km) + ' flown' : ''}</span>
             ${eta}
-            <span>${f.remaining_km != null ? f.remaining_km + ' km left' : ''}</span>
+            <span>${f.remaining_km != null ? fmtDist(f.remaining_km) + ' left' : ''}</span>
           </div>
         </div>`;
     }
 
     function renderCard(f) {
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || '—';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || null;
       const bearingLabel = f.bearing_deg != null
         ? `${compassLabel(f.bearing_deg)} ${f.bearing_deg}°` : null;
-      const idLine = f.flight_iata
-        ? `${esc(f.callsign || '—')} · ${esc(f.flight_iata)}`
-        : esc(f.callsign || '—');
+      const idLine = esc(flightIdText(f)) +
+        (f.squawk ? ` · <span title="Squawk code">Squawk ${esc(f.squawk)}</span>` : '');
       const speedCell = f.speed_kts != null
-        ? `${Math.round(f.speed_kts)} kts<span class="stat-sub">${f.speed_kmh} km/h</span>`
+        ? `${fmtSpeed(f)}<span class="stat-sub">${fmtSpeedAlt(f)}</span>`
         : '<span class="na">N/A</span>';
       const photo = f.photo_thumb || f.photo;
       const photoHtml = photo
-        ? `<div class="card-photo" style="background-image: url('${encodeURI(photo)}')"></div>` : '';
+        ? `<div class="card-photo" style="background-image: url('${encodeURI(photo)}')">${PHOTO_CREDIT}</div>` : '';
       const regHtml = f.registration ? `<span class="reg">${esc(f.registration)}</span>` : '';
       const logoHtml = f.airline_iata
         ? `<img class="airline-logo" src="${logoUrl(f.airline_iata)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
@@ -1025,13 +1482,16 @@
                 <div class="callsign">${idLine}</div>
               </div>
             </div>
-            <span class="badge ${f.on_ground ? 'badge-ground' : 'badge-air'}">
-              ${f.on_ground ? 'Ground' : 'Airborne'}
-            </span>
+            <div class="card-badges">
+              ${alertBadgesHtml(f)}
+              <span class="badge ${f.on_ground ? 'badge-ground' : 'badge-air'}">
+                ${f.on_ground ? 'Ground' : 'Airborne'}
+              </span>
+            </div>
           </div>
 
           <div class="aircraft ${aircraftLabel ? '' : 'unknown'}">
-            ${aircraftLabel ? esc(aircraftLabel) : 'Unknown aircraft'}${regHtml}
+            ${aircraftLabel ? esc(aircraftLabel) : 'Unknown aircraft'}${regHtml}${phaseChip(f)}
           </div>
 
           ${renderRoute(f)}
@@ -1040,7 +1500,7 @@
           <div class="stats">
             <div class="stat">
               <div class="stat-label">Altitude</div>
-              <div class="stat-value">${statVal(f.altitude_ft, ' ft')}${vrateHtml(f)}</div>
+              <div class="stat-value">${naHtml(fmtAlt(f.altitude_ft))}${vrateHtml(f)}</div>
             </div>
             <div class="stat">
               <div class="stat-label">Speed</div>
@@ -1048,11 +1508,11 @@
             </div>
             <div class="stat">
               <div class="stat-label">Distance</div>
-              <div class="stat-value">${statVal(f.distance_km, ' km', 1)}</div>
+              <div class="stat-value">${naHtml(fmtDist(f.distance_km))}</div>
             </div>
             <div class="stat">
-              <div class="stat-label">${f.squawk ? 'Squawk' : 'Bearing'}</div>
-              <div class="stat-value">${f.squawk ? esc(f.squawk) : (bearingLabel ? esc(bearingLabel) : '<span class="na">N/A</span>')}</div>
+              <div class="stat-label">Bearing</div>
+              <div class="stat-value">${bearingLabel ? esc(bearingLabel) : '<span class="na">N/A</span>'}</div>
             </div>
           </div>
         </div>`;
@@ -1060,31 +1520,143 @@
 
     function renderCards() {
       const grid = document.getElementById('grid');
-      const countBar = document.getElementById('count-bar');
-      const flights = getVisibleFlights();
-      if (!flights.length) {
-        grid.innerHTML = `
-          <div class="empty">
-            <div class="empty-icon">🛬</div>
-            <p>No flights detected nearby.<br>
-            Try moving to a busier area or increasing the search radius.</p>
-          </div>`;
-        countBar.innerHTML = '';
-        return;
-      }
-      grid.innerHTML = flights.map(renderCard).join('');
-      countBar.innerHTML =
-        `<strong>${flights.length}</strong> flight${flights.length !== 1 ? 's' : ''} near your location`;
+      const flights = getListedFlights();
+      renderCountBar(flights);
+      grid.innerHTML = flights.length ? flights.map(renderCard).join('') : emptyListHtml();
     }
 
-    /* ────────────── Hero banner (closest flight) ────────────── */
+    // Says plainly when a search or filter is why flights are missing, so the
+    // app doesn't look broken.
+    function emptyListHtml() {
+      const narrowed = latestFlights.length > 0;
+      return `
+        <div class="empty">
+          <div class="empty-icon">🛬</div>
+          ${narrowed
+            ? `<p>No flights match your search or filters.</p>
+               <button onclick="clearSearchAndFilters()">Clear search and filters</button>`
+            : `<p>No flights detected nearby.<br>
+               Try moving to a busier area or increasing the search radius.</p>`}
+        </div>`;
+    }
+
+    function renderCountBar(flights) {
+      const countBar = document.getElementById('count-bar');
+      if (!latestFlights.length) { countBar.innerHTML = ''; return; }
+      const noun = (n) => `flight${n !== 1 ? 's' : ''}`;
+      const beforeFilters = hideGround ? latestFlights.filter((f) => !f.on_ground).length : latestFlights.length;
+      const afterFilters = getVisibleFlights().length;
+      const hidden = beforeFilters - afterFilters;
+      const lead = flights.length === afterFilters
+        ? `<strong>${flights.length}</strong> ${noun(flights.length)} near your location`
+        : `<strong>${flights.length}</strong> of ${afterFilters} ${noun(afterFilters)} match your search`;
+      countBar.innerHTML = lead + (hidden > 0 ? ` · ${hidden} hidden by filters` : '');
+    }
+
+    /* ────────────── Table view ────────────── */
+
+    const LS_TABLE_SORT = 'ofw:tableSort';
+    const airportCode = (a) => (a ? a.iata || a.icao || '???' : null);
+    const routeText = (f) => (f.origin || f.destination ? `${airportCode(f.origin) || '???'} → ${airportCode(f.destination) || '???'}` : null);
+    const dash = (v) => (v == null || v === '' ? '—' : esc(v));
+    // value = what the column sorts by; null always sorts last. html = what it shows.
+    const TABLE_COLS = [
+      { key: 'flight', label: 'Flight', value: displayId,
+        html: (f) => `<button class="t-open" data-icao="${esc(f.icao24)}" title="Show on map">${esc(displayId(f))}</button> ${alertBadgesHtml(f)}` },
+      { key: 'airline', label: 'Airline', value: (f) => f.airline_name || f.airline_icao || null,
+        html: (f) => (f.airline_iata ? `<img src="${logoUrl(f.airline_iata)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '')
+          + dash(f.airline_name || f.airline_icao) },
+      { key: 'type', label: 'Type', value: (f) => f.aircraft_code || null, html: (f) => dash(f.aircraft_code) },
+      { key: 'reg', label: 'Reg', small: true, value: (f) => f.registration || null, html: (f) => dash(f.registration) },
+      { key: 'route', label: 'Route', value: routeText, html: (f) => dash(routeText(f)) },
+      { key: 'phase', label: 'Phase', value: flightPhase, html: phaseChip },
+      { key: 'alt', label: 'Altitude', num: true, value: (f) => f.altitude_ft, html: (f) => dash(fmtAlt(f.altitude_ft)) },
+      { key: 'vrate', label: 'Vertical rate', num: true, value: (f) => f.vertical_rate, html: (f) => dash(fmtVRate(f.vertical_rate)) },
+      { key: 'speed', label: 'Speed', num: true, value: (f) => f.speed_kts, html: (f) => dash(fmtSpeed(f)) },
+      { key: 'dist', label: 'Distance', num: true, value: (f) => f.distance_km, html: (f) => dash(fmtDist(f.distance_km)) },
+      { key: 'heading', label: 'Heading', small: true, num: true, value: (f) => f.heading_deg,
+        html: (f) => (f.heading_deg == null ? '—' : esc(`${compassLabel(f.heading_deg)} ${Math.round(f.heading_deg)}°`)) },
+      { key: 'squawk', label: 'Squawk', small: true, value: (f) => f.squawk || null,
+        html: (f) => (isEmergency(f) ? `<span class="t-alert">${esc(f.squawk)}</span>` : dash(f.squawk)) },
+    ];
+    let tableSort = { key: 'dist', dir: 1 };
+
+    function sortForTable(flights) {
+      const col = TABLE_COLS.find((c) => c.key === tableSort.key);
+      return flights.slice().sort((a, b) => {
+        const x = col.value(a), y = col.value(b);
+        if (x == null && y == null) return 0;
+        if (x == null) return 1;      // missing values stay last in both directions
+        if (y == null) return -1;
+        return tableSort.dir * (typeof x === 'number' ? x - y : String(x).localeCompare(String(y)));
+      });
+    }
+
+    function renderTable() {
+      const flights = getListedFlights();
+      renderCountBar(flights);
+      const host = document.getElementById('table-view');
+      if (!flights.length) { host.innerHTML = `<div class="grid">${emptyListHtml()}</div>`; return; }
+      const cellClass = (c) => [c.num ? 't-num' : '', c.small ? 't-hide-sm' : ''].join(' ').trim();
+      const sorted = sortForTable(flights);
+      const scroll = host.querySelector('.table-wrap')?.scrollLeft || 0;
+      host.innerHTML = `
+        <div class="table-wrap">
+          <table class="flight-table">
+            <thead><tr>${TABLE_COLS.map((c) => {
+              const aria = c.key === tableSort.key ? (tableSort.dir > 0 ? 'ascending' : 'descending') : 'none';
+              return `<th class="${cellClass(c)}" aria-sort="${aria}" scope="col"><button data-sort="${c.key}">${c.label}</button></th>`;
+            }).join('')}</tr></thead>
+            <tbody>${sorted.map((f) => `<tr>${TABLE_COLS.map((c) =>
+              `<td class="${cellClass(c)}">${c.html(f)}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+      host.querySelector('.table-wrap').scrollLeft = scroll;
+    }
+
+    function onTableSort(key) {
+      tableSort = tableSort.key === key ? { key, dir: -tableSort.dir } : { key, dir: 1 };
+      lsSet(LS_TABLE_SORT, JSON.stringify(tableSort));
+      renderTable();
+      document.querySelector(`#table-view [data-sort="${key}"]`)?.focus();
+    }
+
+    function initTableSort() {
+      try {
+        const saved = JSON.parse(lsGet(LS_TABLE_SORT));
+        if (saved && TABLE_COLS.some((c) => c.key === saved.key)) {
+          tableSort = { key: saved.key, dir: saved.dir < 0 ? -1 : 1 };
+        }
+      } catch { /* malformed: keep the default sort */ }
+    }
+
+    // Open one flight on the map, wherever the map has got to.
+    function focusPlane(icao) {
+      setView('map', () => {
+        const m = mapMarkers.get(icao);
+        if (!m) return;
+        selectedIcao = icao;
+        map.panTo(m.shown);
+        m.marker.openPopup();
+        drawRoute(m.f);
+      });
+    }
+
+    document.getElementById('table-view').addEventListener('click', (e) => {
+      const sortBtn = e.target.closest('[data-sort]');
+      if (sortBtn) { onTableSort(sortBtn.dataset.sort); return; }
+      const open = e.target.closest('[data-icao]');
+      if (open) focusPlane(open.dataset.icao);
+    });
+
+    /* ────────────── Hero banner (most overhead flight) ────────────── */
 
     function renderHero() {
       const hero = document.getElementById('hero');
-      const f = closestFlight();
+      const f = mostOverheadFlight();
       if (!f) { hero.innerHTML = ''; delete hero.dataset.key; return; }
 
-      // Redraw the plane only when the closest aircraft (or its direction)
+      // Redraw the plane only when the featured aircraft (or its direction)
       // changes, so the tail logo does not flicker on every poll or re-sort.
       const key = `${f.icao24}:${isWestbound(f) ? 'w' : 'e'}`;
       if (hero.dataset.key !== key) {
@@ -1094,36 +1666,36 @@
         loadTailLogo(f, 'hero');
       }
 
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || '—';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
-      const idText = f.flight_iata ? `${f.callsign || ''} · ${f.flight_iata}` : (f.callsign || '');
+      const idText = flightIdText(f);
       const heroLogoHtml = f.airline_iata
         ? `<img class="hero-logo" src="${logoUrl(f.airline_iata)}" alt="${esc(airlineName)}" loading="lazy" onerror="this.style.display='none'">`
         : '';
 
       hero.querySelector('.hero-body').innerHTML = `
-        <div class="hero-label">✦ Closest flight</div>
+        <div class="hero-label">✦ Most overhead</div>
         <div class="hero-head">
           ${heroLogoHtml}
           <div>
             <div class="hero-title">${esc(airlineName)}</div>
-            <div class="hero-sub">${[idText, aircraftLabel, f.registration].filter(Boolean).map(esc).join(' · ')}</div>
+            <div class="hero-sub">${[idText, aircraftLabel, f.registration].filter(Boolean).map(esc).join(' · ')} ${phaseChip(f)}</div>
           </div>
         </div>
         ${renderRoute(f)}
         ${renderProgress(f)}`;
       hero.querySelector('.hero-stats').innerHTML = `
           <div>
-            <div class="hero-stat-value">${f.distance_km != null ? f.distance_km : '—'}</div>
-            <div class="hero-stat-label">km away</div>
+            <div class="hero-stat-value">${f.distance_km != null ? distNum(f.distance_km) : '—'}</div>
+            <div class="hero-stat-label">${distUnit()} away</div>
           </div>
           <div>
-            <div class="hero-stat-value">${f.altitude_ft != null ? f.altitude_ft : '—'}${vrateHtml(f)}</div>
-            <div class="hero-stat-label">ft alt</div>
+            <div class="hero-stat-value">${f.altitude_ft != null ? altNum(f.altitude_ft) : '—'}${vrateHtml(f)}</div>
+            <div class="hero-stat-label">${altUnit()} alt</div>
           </div>
           <div>
-            <div class="hero-stat-value">${f.speed_kts != null ? Math.round(f.speed_kts) : '—'}</div>
-            <div class="hero-stat-label">kts${f.speed_kmh != null ? ` · ${f.speed_kmh} km/h` : ''}</div>
+            <div class="hero-stat-value">${f.speed_kts != null ? speedNum(f) : '—'}</div>
+            <div class="hero-stat-label">${speedUnit()}${f.speed_kts != null ? ` · ${fmtSpeedAlt(f)}` : ''}</div>
           </div>`;
     }
 
@@ -1174,6 +1746,48 @@
       });
       map.addControl(new LocateControl());
 
+      // Callsign labels on or off.
+      const LabelsControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd() {
+          const btn = L.DomUtil.create('button', 'locate-btn map-btn');
+          btn.id = 'labels-btn';
+          btn.textContent = 'Aa';
+          btn.title = 'Show callsign labels (L)';
+          L.DomEvent.on(btn, 'click', (e) => { L.DomEvent.stop(e); toggleMapLabels(); });
+          return btn;
+        },
+      });
+      map.addControl(new LabelsControl());
+
+      // Which plane the map is following, with a way to stop.
+      const CentredControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd() {
+          const chip = L.DomUtil.create('div', 'centred-chip');
+          chip.id = 'centred-chip';
+          chip.hidden = true;
+          L.DomEvent.disableClickPropagation(chip);
+          return chip;
+        },
+      });
+      map.addControl(new CentredControl());
+
+      const LegendControl = L.Control.extend({
+        options: { position: 'bottomright' },
+        onAdd() {
+          const box = L.DomUtil.create('div', 'map-legend');
+          box.id = 'map-legend';
+          L.DomEvent.disableClickPropagation(box);
+          return box;
+        },
+      });
+      map.addControl(new LegendControl());
+      syncMapControls();
+
+      // Dragging means the user wants to look elsewhere.
+      map.on('dragstart', stopCentred);
+
       // Click the map to set your location manually (fallback when GPS fails)
       map.on('click', (e) => setLocation(e.latlng.lat, e.latlng.lng));
 
@@ -1207,6 +1821,7 @@
         }).addTo(map);
       }
 
+      stopCentred();
       map.setView(latlng, 9);
     }
 
@@ -1217,14 +1832,47 @@
       return Math.round(Math.max(32, Math.min(64, 42 + (zoom - 9) * 3)));
     }
 
+    // ── Altitude colours ──
+    // Altitude is ordered, so it gets one hue from light (low, the planes you
+    // notice) to dark (high). Lightness stays readable with colour blindness, and
+    // red stays reserved for emergencies. Validated as an ordinal ramp on the dark map.
+    const ALTITUDE_BANDS = [
+      { below: 2000, color: '#f0f6ff' },
+      { below: 10000, color: '#c3daff' },
+      { below: 20000, color: '#94bcfb' },
+      { below: 30000, color: '#689cf0' },
+      { below: Infinity, color: '#4a7edb' },
+    ];
+    const NO_ALTITUDE_COLOR = '#8b949e';   // on the ground, or altitude unknown
+
+    function altitudeColor(f) {
+      if (f.on_ground || f.altitude_ft == null) return NO_ALTITUDE_COLOR;
+      return ALTITUDE_BANDS.find((b) => f.altitude_ft < b.below).color;
+    }
+
+    function legendHtml() {
+      const k = (ft) => `${Number((altNum(ft) / 1000).toFixed(1))}k`;
+      const row = (color, label) => `<div><i style="background:${color}"></i>${label}</div>`;
+      const b = ALTITUDE_BANDS;
+      return `<div><b>Altitude (${altUnit()})</b></div>`
+        + row(b[4].color, `Above ${k(30000)}`)
+        + row(b[3].color, `${k(20000)}–${k(30000)}`)
+        + row(b[2].color, `${k(10000)}–${k(20000)}`)
+        + row(b[1].color, `${k(2000)}–${k(10000)}`)
+        + row(b[0].color, `Below ${k(2000)}`)
+        + row(NO_ALTITUDE_COLOR, 'Ground or unknown')
+        + row('#f85149', 'Emergency');
+    }
+
     function planeIcon(f) {
       const heading = f.heading_deg || 0;
       const size = planeIconSize();
+      const color = isEmergency(f) ? '' : `color:${altitudeColor(f)};`;
       // The ✈ glyph points east (90°) unrotated, so subtract 90° to align it with the heading.
       return L.divIcon({
         className: '',
-        html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''}"
-                    style="transform: rotate(${heading - 90}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
+        html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''} ${isEmergency(f) ? 'emergency' : ''}"
+                    style="${color}transform: rotate(${heading - 90}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
@@ -1232,35 +1880,79 @@
 
     // Only swap the icon when something visible changed, so it does not flicker.
     function updatePlaneIcon(m, force = false) {
-      const key = `${m.f.heading_deg || 0}|${m.f.on_ground}|${planeIconSize()}`;
+      const key = `${m.f.heading_deg || 0}|${altitudeColor(m.f)}|${isEmergency(m.f)}|${planeIconSize()}`;
       if (force || key !== m.iconKey) { m.marker.setIcon(planeIcon(m.f)); m.iconKey = key; }
     }
 
     function planePopupHtml(f) {
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || '—';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
-      const idText = f.flight_iata ? `${f.callsign || ''} · ${f.flight_iata}` : (f.callsign || '');
+      const idText = flightIdText(f);
       const regText = f.registration ? ` · ${f.registration}` : '';
       const oCode = (f.origin && (f.origin.iata || f.origin.icao)) || '???';
       const dCode = (f.destination && (f.destination.iata || f.destination.icao)) || '???';
-      const routeText = (f.origin || f.destination) ? `${oCode} ✈ ${dCode}` : 'Route unavailable';
-      const speedText = f.speed_kts != null ? `${Math.round(f.speed_kts)} kts (${f.speed_kmh} km/h)` : 'N/A';
+      const routeText = (f.origin || f.destination)
+        ? `${oCode} ✈ ${dCode}${f.route_plausible === false ? ' (route unverified)' : ''}`
+        : 'Route unavailable';
+      const speedText = f.speed_kts != null ? `${fmtSpeed(f)} (${fmtSpeedAlt(f)})` : 'N/A';
       const progText = f.progress_pct != null
         ? `<br>${f.progress_pct}% flown${f.eta_min != null ? ` · ~${fmtDuration(f.eta_min)} to go` : ''}`
         : '';
       const photo = f.photo_thumb || f.photo;
-      const photoTag = photo ? `<img src="${encodeURI(photo)}" style="width:100%;border-radius:4px;margin-bottom:4px">` : '';
+      const photoTag = photo
+        ? `<img src="${encodeURI(photo)}" alt="Photo of this aircraft" style="width:100%;border-radius:4px"><div style="text-align:right;margin-bottom:4px">${PHOTO_CREDIT}</div>`
+        : '';
       const logoTag = f.airline_iata
         ? `<img src="${logoUrl(f.airline_iata)}" style="height:20px;width:auto;border-radius:3px;background:#fff;padding:1px 4px;vertical-align:middle;margin-right:4px" onerror="this.style.display='none'">`
         : '';
 
       return `
         ${photoTag}
-        <b>${logoTag}${esc(airlineName)}</b><br>
+        <b>${logoTag}${esc(airlineName)}</b> ${alertBadgesHtml(f)}<br>
         ${esc(idText)}${esc(regText)} · ${esc(aircraftLabel)}<br>
         ${esc(routeText)}<br>
-        ${statVal(f.altitude_ft, ' ft')} · ${esc(speedText)}${progText}
+        ${naHtml(fmtAlt(f.altitude_ft))} · ${esc(speedText)} ${phaseChip(f)}${progText}
+        ${altitudeChartHtml(f.icao24)}
+        <button class="popup-btn ${centredIcao === f.icao24 ? 'active' : ''}" data-icao="${esc(f.icao24)}"
+                onclick="event.stopPropagation(); toggleCentred(this.dataset.icao)">${centredIcao === f.icao24 ? 'Stop centring' : 'Keep centred'}</button>
       `;
+    }
+
+    // Altitude over this session, from the shared position history. One series,
+    // so the caption names it and no legend is needed.
+    function altitudeChartHtml(icao) {
+      const pts = historyPoints(icao).filter((p) => p.alt != null);
+      if (pts.length < 2) return '';
+      const W = 220, H = 44, PAD = 5;
+      const alts = pts.map((p) => p.alt);
+      const min = Math.min(...alts), max = Math.max(...alts);
+      // At least 500 ft of range, so instrument noise on level flight stays flat.
+      const span = Math.max(max - min, 500);
+      const mid = (min + max) / 2;
+      const t0 = pts[0].t, tSpan = Math.max(pts[pts.length - 1].t - t0, 1);
+      const x = (p) => ((p.t - t0) / tSpan) * (W - PAD * 2) + PAD;
+      const y = (p) => H / 2 - ((p.alt - mid) / span) * (H - PAD * 2);
+      const coords = pts.map((p) => `${x(p).toFixed(1)},${y(p).toFixed(1)}`).join(' ');
+      const last = pts[pts.length - 1];
+      const now = Date.now();
+      const ago = (p) => {
+        const mins = Math.round((now - p.t) / 60000);
+        return mins < 1 ? 'just now' : `${mins} min ago`;
+      };
+      // Hover targets are larger than the visible line.
+      const hits = pts.map((p) => `<circle cx="${x(p).toFixed(1)}" cy="${y(p).toFixed(1)}" r="7" fill="transparent"><title>${esc(fmtAlt(p.alt))} · ${ago(p)}</title></circle>`).join('');
+      const minutes = Math.max(1, Math.round((last.t - t0) / 60000));
+      return `
+        <div class="alt-chart">
+          <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+               aria-label="Altitude over the last ${minutes} minutes, from ${esc(fmtAlt(min))} to ${esc(fmtAlt(max))}">
+            <polyline points="${coords}" fill="none" stroke="#58a6ff" stroke-width="2"
+                      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+            <circle cx="${x(last).toFixed(1)}" cy="${y(last).toFixed(1)}" r="4" fill="#58a6ff" stroke="#161b22" stroke-width="2"/>
+            ${hits}
+          </svg>
+          <div class="alt-chart-caption"><span>Altitude, last ${minutes} min</span><span>${esc(fmtAlt(min))} – ${esc(fmtAlt(max))}</span></div>
+        </div>`;
     }
 
     // Point `km` along `bearing` from lat/lon (inverse of haversine + bearing).
@@ -1297,6 +1989,7 @@
 
     function drawRoute(f) {
       routeLayer.clearLayers();
+      if (f.route_plausible === false) return;   // don't draw a line we doubt
       const segments = [];
       const pos = [f.lat, f.lon];
       if (f.origin && f.origin.lat != null) segments.push([[f.origin.lat, f.origin.lon], pos]);
@@ -1324,37 +2017,139 @@
     // Plane markers persist across polls, keyed by icao24, so an open popup
     // survives a refresh and planes can glide between fixes (see glideFrame).
     const mapMarkers = new Map();   // icao24 → { f, marker, trail, path, shown, from, t0, fixT }
-    const TRAIL_POINTS = 12;        // recent real positions kept per aircraft
+    const TRAIL_POINTS = 12;        // recent real positions drawn as the trail
     const GLIDE_BLEND_MS = 1500;    // ease from the old track onto a new fix
     const GLIDE_MAX_S = 60;         // never dead-reckon further than this
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ── Shared position history ──
+    // Recorded on every poll whichever view is showing, so trails and charts
+    // survive view switches and filtering. A future radar view can reuse it.
+    const flightHistory = new Map();   // icao24 → { points: [{lat, lon, alt, t}], seen }
+    const HISTORY_POINTS = 120;        // about an hour at the 30 s poll
+    const HISTORY_FORGET_MS = 10 * 60_000;
+
+    function recordHistory() {
+      const now = Date.now();
+      latestFlights.forEach((f) => {
+        if (f.lat == null || f.lon == null) return;
+        let h = flightHistory.get(f.icao24);
+        if (!h) { h = { points: [], seen: now }; flightHistory.set(f.icao24, h); }
+        h.seen = now;
+        const last = h.points[h.points.length - 1];
+        if (last && last.lat === f.lat && last.lon === f.lon) return;   // the same fix again
+        h.points.push({ lat: f.lat, lon: f.lon, alt: f.altitude_ft, t: now });
+        if (h.points.length > HISTORY_POINTS) h.points.shift();
+      });
+      flightHistory.forEach((h, icao) => {
+        if (now - h.seen > HISTORY_FORGET_MS) flightHistory.delete(icao);
+      });
+    }
+
+    const historyPoints = (icao) => flightHistory.get(icao)?.points || [];
+
+    // ── Map labels ──
+    const LS_MAP_LABELS = 'ofw:mapLabels';
+    let mapLabels = false;
+
+    function updatePlaneLabel(m) {
+      if (!mapLabels) {
+        if (m.labelText) { m.marker.unbindTooltip(); m.labelText = null; }
+        return;
+      }
+      const text = displayId(m.f);
+      if (text === m.labelText) return;
+      if (m.labelText) m.marker.setTooltipContent(esc(text));
+      else m.marker.bindTooltip(esc(text), { permanent: true, direction: 'right', offset: [14, 0], className: 'plane-label', interactive: false });
+      m.labelText = text;
+    }
+
+    function toggleMapLabels() {
+      mapLabels = !mapLabels;
+      lsSet(LS_MAP_LABELS, mapLabels ? '1' : null);
+      syncMapControls();
+      mapMarkers.forEach(updatePlaneLabel);
+    }
+
+    function syncMapControls() {
+      const btn = document.getElementById('labels-btn');
+      if (btn) {
+        btn.classList.toggle('active', mapLabels);
+        btn.setAttribute('aria-pressed', String(mapLabels));
+      }
+      const legend = document.getElementById('map-legend');
+      if (legend) legend.innerHTML = legendHtml();
+      const chip = document.getElementById('centred-chip');
+      if (chip) {
+        const m = centredIcao && mapMarkers.get(centredIcao);
+        chip.hidden = !m;
+        chip.innerHTML = m
+          ? `Centred on ${esc(displayId(m.f))} <button onclick="event.stopPropagation(); stopCentred()" aria-label="Stop centring" title="Stop centring (Esc)">✕</button>`
+          : '';
+      }
+    }
+
+    // ── Keep a plane centred ── Only inside the radius. Following a flight
+    // anywhere is a separate roadmap item. Its buttons rebuild themselves, so they
+    // stop propagation: otherwise Leaflet can't tell the click came from a control,
+    // treats it as a map click, and moves the user's location.
+    let centredIcao = null;
+    let selectedIcao = null;   // last plane opened, the target of the C shortcut
+
+    function refreshPopup(icao) {
+      const m = icao && mapMarkers.get(icao);
+      if (m) m.marker.setPopupContent(planePopupHtml(m.f));
+    }
+
+    function toggleCentred(icao) {
+      if (centredIcao === icao) { stopCentred(); return; }
+      const previous = centredIcao;
+      centredIcao = icao;
+      const m = mapMarkers.get(icao);
+      if (m && map) map.panTo(m.shown, { animate: false });
+      syncMapControls();
+      refreshPopup(previous);
+      refreshPopup(icao);
+    }
+
+    function stopCentred() {
+      if (!centredIcao) return;
+      const previous = centredIcao;
+      centredIcao = null;
+      syncMapControls();
+      refreshPopup(previous);
+    }
 
     function renderMap() {
       if (!map) return;
       const now = performance.now();
       const seen = new Set();
-      getVisibleFlights().forEach((f) => {
+      getListedFlights().forEach((f) => {
         if (f.lat == null || f.lon == null) return;
         seen.add(f.icao24);
         let m = mapMarkers.get(f.icao24);
         if (!m) {
-          m = { f, path: [], shown: [f.lat, f.lon] };
+          m = { f, path: [], shown: [f.lat, f.lon], trailColor: null };
           m.marker = L.marker(m.shown, { icon: planeIcon(f) }).bindPopup('').addTo(planeLayer);
-          m.marker.on('click', () => drawRoute(m.f));
+          m.marker.on('click', () => { selectedIcao = m.f.icao24; drawRoute(m.f); });
           m.trail = L.polyline([], { color: '#58a6ff', weight: 2, opacity: 0.45, interactive: false })
             .addTo(trailLayer);
           mapMarkers.set(f.icao24, m);
         }
         if (!m.fixT || m.f.lat !== f.lat || m.f.lon !== f.lon) {
-          // A new real position: extend the trail and restart the blend from
-          // wherever the plane is currently drawn.
-          m.path.push([f.lat, f.lon]);
-          if (m.path.length > TRAIL_POINTS) m.path.shift();
+          // A new real position: restart the blend from wherever the plane is
+          // currently drawn.
           m.from = m.shown.slice();
-          m.t0 = m.fixT = now;
+          m.t0 = now;
+          // Dead-reckon from when the position was really measured.
+          m.fixT = now - (f.position_age_s || 0) * 1000;
         }
+        m.path = historyPoints(f.icao24).slice(-TRAIL_POINTS).map((p) => [p.lat, p.lon]);
         m.f = f;
         updatePlaneIcon(m);
+        updatePlaneLabel(m);
+        const color = altitudeColor(f);
+        if (color !== m.trailColor) { m.trail.setStyle({ color }); m.trailColor = color; }
         m.marker.setPopupContent(planePopupHtml(f));
       });
       for (const [icao, m] of mapMarkers) {
@@ -1362,9 +2157,13 @@
         planeLayer.removeLayer(m.marker);
         trailLayer.removeLayer(m.trail);
         mapMarkers.delete(icao);
+        if (icao === centredIcao) centredIcao = null;   // it left the list
       }
+      syncMapControls();
       if (reduceMotion) {
         mapMarkers.forEach((m) => placePlane(m, [m.f.lat, m.f.lon]));
+        const centred = mapMarkers.get(centredIcao);
+        if (centred) map.panTo(centred.shown, { animate: false });
       } else {
         startGlide();
       }
@@ -1398,21 +2197,24 @@
         const a = Math.min(1, (now - m.t0) / GLIDE_BLEND_MS);
         const e = a * (2 - a);   // ease-out
         placePlane(m, [m.from[0] + (target[0] - m.from[0]) * e, m.from[1] + (target[1] - m.from[1]) * e]);
+        if (m.f.icao24 === centredIcao) map.panTo(m.shown, { animate: false });
       });
     }
     document.addEventListener('visibilitychange', () => { if (!document.hidden && view === 'map') startGlide(); });
 
     /* ────────────── View switching ────────────── */
 
-    function setView(next) {
+    function setView(next, thenDo) {
       view = next;
       document.getElementById('btn-cards').classList.toggle('active', next === 'cards');
+      document.getElementById('btn-table').classList.toggle('active', next === 'table');
       document.getElementById('btn-map').classList.toggle('active', next === 'map');
       document.getElementById('main').classList.toggle('map-mode', next === 'map');
+      document.getElementById('main').classList.toggle('table-mode', next === 'table');
       if (next === 'map') {
         initMap();
         // Leaflet needs a size recalculation when its container becomes visible
-        setTimeout(() => { map.invalidateSize(); refreshUI(); }, 50);
+        setTimeout(() => { map.invalidateSize(); refreshUI(); if (thenDo) thenDo(); }, 50);
       } else {
         refreshUI();
       }
@@ -1422,7 +2224,9 @@
 
     // Re-render whichever view is active, plus the hero banner and overhead alert.
     function refreshUI() {
-      if (view === 'map') renderMap(); else renderCards();
+      if (view === 'map') renderMap();
+      else if (view === 'table') renderTable();
+      else renderCards();
       renderHero();
       if (document.body.classList.contains('wall-mode')) renderWall();
       checkOverhead();
@@ -1450,7 +2254,11 @@
 
     // Show (or clear, when passed null) the warning marker beside the dropdown.
     function setNotifyWarn(msg) {
+      // The ⚠ stays in the header so a problem is seen without opening Settings.
       const el = document.getElementById('notify-warn');
+      const text = document.getElementById('notify-warn-text');
+      text.hidden = !msg;
+      text.textContent = msg ? `⚠ ${msg}` : '';
       if (!msg) { el.hidden = true; el.textContent = ''; el.title = ''; return; }
       el.hidden = false;
       el.textContent = '⚠';
@@ -1536,8 +2344,8 @@
 
     // Build a short label for a flight (airline / callsign + route).
     function flightLabel(f) {
-      const name = f.airline_name || f.airline_icao || f.callsign || 'Flight';
-      const id = f.flight_iata || f.callsign || '';
+      const name = f.airline_name || f.airline_icao || 'Flight';
+      const id = f.flight_iata || displayId(f);
       const o = f.origin && (f.origin.iata || f.origin.icao);
       const d = f.destination && (f.destination.iata || f.destination.icao);
       const route = (o || d) ? ` · ${o || '???'}→${d || '???'}` : '';
@@ -1546,20 +2354,156 @@
 
     // ── Sound alert on new flights ──
     let audioCtx = null;
-    function beep() {
+    function playTone(freq, delay = 0, length = 0.4) {
       if (!soundOn) return;
       try {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
+        const t = audioCtx.currentTime + delay;
         o.connect(g); g.connect(audioCtx.destination);
-        o.type = 'sine'; o.frequency.value = 880;
-        g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
-        o.start();
-        o.stop(audioCtx.currentTime + 0.4);
+        o.type = 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+        o.start(t);
+        o.stop(t + length);
       } catch (e) { /* ignore */ }
+    }
+    function beep() { playTone(880); }
+    // Two alternating notes, so an alert can't be mistaken for a new-flight ping.
+    function alertTone() {
+      [0, 0.3, 0.6, 0.9].forEach((delay, i) => playTone(i % 2 ? 660 : 990, delay, 0.28));
+    }
+
+    // ── Special alerts: emergency squawks and the personal watchlist ──
+    // These read latestFlights, like checkOverhead, so a display filter can never
+    // hide an emergency.
+    const ALERT_SQUAWKS = { 7500: 'Hijack', 7600: 'Radio failure', 7700: 'Emergency' };
+    const ALERT_REARM_MS = 30 * 60_000;   // alert again if it returns after this long
+    const LS_WATCHLIST = 'ofw:watchlist';
+    let watchlist = [];                   // parsed entries, see parseWatchlist()
+    const alertLastSeen = new Map();      // alert key → last poll it was true
+    const activeAlerts = new Map();       // alert key → { kind, text }, shown in the toast
+    const dismissedAlerts = new Set();    // keys the user closed while still true
+
+    const isEmergency = (f) => Boolean(ALERT_SQUAWKS[f.squawk]);
+
+    // "type:A388" → { field: 'type', value: 'A388', text }; a plain value has no field.
+    function parseWatchlist(text) {
+      return String(text || '').split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+        const m = line.match(/^(callsign|reg|type|airline):\s*(.+)$/i);
+        return {
+          field: m ? m[1].toLowerCase() : null,
+          value: (m ? m[2] : line).trim().toUpperCase(),
+          text: line,
+        };
+      });
+    }
+
+    function matchesWatchEntry(f, entry) {
+      const up = (v) => String(v || '').toUpperCase();
+      const v = entry.value;
+      const tests = {
+        // A prefix, so "BAW1" covers BAW123; registrations and types must match exactly.
+        callsign: () => up(f.callsign).startsWith(v) || up(f.flight_iata).startsWith(v),
+        reg: () => up(f.registration) === v,
+        type: () => up(f.aircraft_code) === v,
+        airline: () => up(f.airline_iata) === v || up(f.airline_icao) === v || up(f.airline_name).includes(v),
+      };
+      return entry.field ? tests[entry.field]() : Object.values(tests).some((test) => test());
+    }
+
+    const watchMatches = (f) => watchlist.filter((entry) => matchesWatchEntry(f, entry));
+
+    function alertBadgesHtml(f) {
+      const badges = [];
+      if (isEmergency(f)) {
+        badges.push(`<span class="badge badge-alert" title="Squawk ${esc(f.squawk)}">⚠ ${esc(ALERT_SQUAWKS[f.squawk])}</span>`);
+      }
+      if (watchMatches(f).length) badges.push('<span class="badge badge-watch">★ Watchlist</span>');
+      return badges.join(' ');
+    }
+
+    // Each reason a flight should alert right now.
+    function alertReasons(f) {
+      const reasons = watchMatches(f).map((entry) => ({
+        key: `${f.icao24}|watch:${entry.text}`, kind: 'watch', title: `Watchlist: ${entry.text}`,
+      }));
+      if (isEmergency(f)) {
+        reasons.unshift({
+          key: `${f.icao24}|squawk:${f.squawk}`, kind: 'squawk',
+          title: `${ALERT_SQUAWKS[f.squawk]} (squawk ${f.squawk})`,
+        });
+      }
+      return reasons;
+    }
+
+    // Fire each alert once per aircraft and reason. Keep it listed while it stays
+    // true, and only fire again if it went away for ALERT_REARM_MS.
+    function checkSpecialAlerts() {
+      const now = Date.now();
+      const current = new Map();
+      latestFlights.forEach((f) => alertReasons(f).forEach((r) => current.set(r.key, { ...r, f })));
+
+      const fresh = [];
+      current.forEach((alert, key) => {
+        const last = alertLastSeen.get(key);
+        if (last === undefined || now - last > ALERT_REARM_MS) {
+          fresh.push(alert);
+          dismissedAlerts.delete(key);
+        }
+        alertLastSeen.set(key, now);
+      });
+      alertLastSeen.forEach((last, key) => {
+        if (now - last > ALERT_REARM_MS) { alertLastSeen.delete(key); dismissedAlerts.delete(key); }
+      });
+
+      activeAlerts.clear();
+      current.forEach((alert, key) => {
+        if (!dismissedAlerts.has(key)) {
+          const dist = alert.f.distance_km != null ? ` · ${fmtDist(alert.f.distance_km)} away` : '';
+          activeAlerts.set(key, { kind: alert.kind, title: alert.title, text: flightLabel(alert.f) + dist });
+        }
+      });
+      renderAlertToast();
+
+      if (fresh.length) {
+        alertTone();
+        fresh.forEach((alert) => sendNotification(alert.title, flightLabel(alert.f),
+          alert.f.airline_iata ? logoUrl(alert.f.airline_iata) : undefined));
+      }
+    }
+
+    function renderAlertToast() {
+      const toast = document.getElementById('alert-toast');
+      const alerts = [...activeAlerts.values()].sort((a, b) => (a.kind === 'squawk' ? -1 : 0) - (b.kind === 'squawk' ? -1 : 0));
+      toast.classList.toggle('show', alerts.length > 0);
+      toast.classList.toggle('watch-only', alerts.every((a) => a.kind !== 'squawk'));
+      const MAX_SHOWN = 4;
+      document.getElementById('alert-list').innerHTML =
+        alerts.slice(0, MAX_SHOWN).map((a) => `<li><b>${a.kind === 'squawk' ? '⚠' : '★'} ${esc(a.title)}</b><br>${esc(a.text)}</li>`).join('')
+        + (alerts.length > MAX_SHOWN ? `<li class="at-more">and ${alerts.length - MAX_SHOWN} more</li>` : '');
+    }
+
+    function dismissAlerts() {
+      activeAlerts.forEach((_, key) => dismissedAlerts.add(key));
+      activeAlerts.clear();
+      renderAlertToast();
+    }
+
+    function initWatchlist() {
+      const saved = lsGet(LS_WATCHLIST) || '';
+      watchlist = parseWatchlist(saved);
+      document.getElementById('watchlist').value = saved;
+      document.getElementById('watchlist-note').hidden = storageAvailable();
+    }
+
+    function onWatchlistChange(text) {
+      watchlist = parseWatchlist(text);
+      lsSet(LS_WATCHLIST, text.trim() ? text : null);
+      checkSpecialAlerts();
+      refreshUI();   // badges on cards, popups and markers
     }
 
     function toggleSound() {
@@ -1631,13 +2575,13 @@
     // Title, route, progress and stat tiles for one flight. Shared by the
     // overhead alert and wall mode, which style it via :is(.overhead, .wall).
     function flightDetailHtml(f) {
-      const airlineName = f.airline_name || f.airline_icao || f.callsign || 'A flight';
+      const airlineName = f.airline_name || f.airline_icao || displayId(f);
       const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
-      const idText = f.flight_iata ? `${f.callsign || ''} · ${f.flight_iata}` : (f.callsign || '');
+      const idText = flightIdText(f);
       const logoHtml = f.airline_iata
         ? `<img class="hero-logo" src="${logoUrl(f.airline_iata)}" alt="" onerror="this.style.display='none'">` : '';
       const speedHtml = f.speed_kts != null
-        ? `${Math.round(f.speed_kts)}<span class="stat-sub">${f.speed_kmh} km/h</span>`
+        ? `${speedNum(f)}<span class="stat-sub">${fmtSpeedAlt(f)}</span>`
         : '<span class="na">N/A</span>';
       const headingHtml = f.heading_deg != null
         ? esc(`${compassLabel(f.heading_deg)} ${Math.round(f.heading_deg)}°`)
@@ -1647,20 +2591,20 @@
 
       return `
         <h1>${logoHtml}<span>${esc(airlineName)}</span></h1>
-        <div class="oh-sub">${esc([idText, aircraftLabel, f.registration].filter(Boolean).join(' · '))}</div>
+        <div class="oh-sub">${esc([idText, aircraftLabel, f.registration].filter(Boolean).join(' · '))} ${phaseChip(f)}</div>
         ${renderRoute(f)}
         ${renderProgress(f)}
         <div class="oh-stats">${[
-          tile(`${statVal(f.altitude_ft)}${vrateHtml(f)}`, 'Altitude ft'),
-          tile(speedHtml, 'Speed kts'),
-          tile(statVal(f.distance_km, '', 1), 'Distance km'),
+          tile(`${f.altitude_ft != null ? altNum(f.altitude_ft) : '<span class="na">N/A</span>'}${vrateHtml(f)}`, `Altitude ${altUnit()}`),
+          tile(speedHtml, `Speed ${speedUnit()}`),
+          tile(f.distance_km != null ? distNum(f.distance_km) : '<span class="na">N/A</span>', `Distance ${distUnit()}`),
           tile(headingHtml, 'Heading'),
           f.squawk ? tile(esc(f.squawk), 'Squawk') : '',
         ].join('')}</div>`;
     }
 
     function renderOverheadInfo(f) {
-      document.getElementById('oh-dist').textContent = `${f.distance_km} km`;
+      document.getElementById('oh-dist').textContent = fmtDist(f.distance_km);
       document.getElementById('oh-detail').innerHTML = flightDetailHtml(f);
     }
 
@@ -2023,7 +2967,7 @@
       const nearest = flights.filter((f) => f.distance_km != null)
         .sort((a, b) => a.distance_km - b.distance_km).slice(0, WALL_FEATURED);
       document.getElementById('wall-count').textContent =
-        `${flights.length} flight${flights.length !== 1 ? 's' : ''} within ${radiusKm} km`;
+        `${flights.length} flight${flights.length !== 1 ? 's' : ''} within ${fmtDist(radiusKm, 0)}`;
 
       if (!nearest.length) {
         wallIcao = wallKey = null;
@@ -2041,7 +2985,7 @@
       const f = nearest[i];
       wallIcao = f.icao24;
 
-      const info = `<div class="wall-rank">✦ Nearest #${i + 1} of ${nearest.length} · ${f.distance_km} km away</div>
+      const info = `<div class="wall-rank">✦ Nearest #${i + 1} of ${nearest.length} · ${fmtDist(f.distance_km)} away</div>
                     ${flightDetailHtml(f)}`;
       const key = `${f.icao24}:${isWestbound(f) ? 'w' : 'e'}`;
       if (key === wallKey) {
@@ -2063,7 +3007,7 @@
     // Scrolling strip of every other flight; rebuilt only when the set changes
     // so the scroll does not restart on every poll.
     function renderWallTicker(list) {
-      const key = list.map((f) => f.icao24).join();
+      const key = `${distUnit()}:${list.map((f) => f.icao24).join()}`;
       if (key === wallTickerKey) return;
       wallTickerKey = key;
       const track = document.getElementById('wall-ticker');
@@ -2075,7 +3019,7 @@
           ? `<img src="${logoUrl(f.airline_iata)}" alt="" onerror="this.style.display='none'">` : '';
         return `<span class="wall-tick">${logo}<b>${esc(f.flight_iata || f.callsign || f.icao24)}</b>
                   ${o || d ? esc(`${o || '???'} → ${d || '???'}`) : ''}
-                  ${f.distance_km != null ? `· ${f.distance_km} km` : ''}</span>`;
+                  ${f.distance_km != null ? `· ${fmtDist(f.distance_km)}` : ''}</span>`;
       }).join('');
       track.innerHTML = items && `${items}<span class="wall-tick-copy" aria-hidden="true" style="display:contents">${items}</span>`;
     }
@@ -2096,7 +3040,9 @@
       try {
         if (DEMO) {
           latestFlights = DEMO.flights(userLocation, radiusKm);
+          recordHistory();
           checkNewFlights();
+          checkSpecialAlerts();
           refreshUI();
           setStatus('ok', `Replaying recorded flights\nrefreshes every ${POLL_MS / 1000}s`);
           return;
@@ -2114,7 +3060,9 @@
         if (data.error) throw new Error(data.error);
 
         latestFlights = Array.isArray(data) ? data : [];
+        recordHistory();
         checkNewFlights();
+        checkSpecialAlerts();
         refreshUI();
         loadConfig();   // update the OpenSky credits badge
 
@@ -2197,6 +3145,8 @@
       initNotify();
       loadConfig();
       initHideGround();
+      initDisplayPrefs();
+      initWatchlist();
       initSavedLocation();
       checkForUpdate();
       // Re-check daily so pages left open for days (wall mode on a TV) still
@@ -2244,8 +3194,16 @@
       notifyMode = 'off';
       document.getElementById('notify').value = 'off';
       initHideGround();
+      initDisplayPrefs();
       setLocation(DEMO.center.lat, DEMO.center.lon);
       if (new URLSearchParams(location.search).get('wall') === '1') toggleWall(true);
+    }
+
+    function initDisplayPrefs() {
+      initFilters();
+      initUnits();
+      initTableSort();
+      mapLabels = lsGet(LS_MAP_LABELS) === '1';
     }
 
     // Restore the Hide ground toggle. Unlike the location this needs no opt-in:
@@ -2396,11 +3354,17 @@
         });
         const data = await res.json();
         if (data.ok) {
-          msg.className = 'modal-msg ok';
-          msg.textContent = 'Saved — now using your OpenSky account.';
           renderConfigStatus(data);
           loadFlights();   // refresh immediately with the higher limit
-          setTimeout(closeSettings, 900);
+          if (data.persisted === false) {
+            // Keep the dialog open: the user needs to read this.
+            msg.className = 'modal-msg err';
+            msg.textContent = 'Now using your OpenSky account, but it could not be saved to disk, so you will need to enter it again after a restart.';
+          } else {
+            msg.className = 'modal-msg ok';
+            msg.textContent = 'Saved — now using your OpenSky account.';
+            setTimeout(closeSettings, 900);
+          }
         } else {
           msg.className = 'modal-msg err';
           msg.textContent = data.error || 'Could not save credentials.';
@@ -2417,9 +3381,14 @@
       const msg = document.getElementById('cfg-msg');
       try {
         const data = await (await fetch('/api/config', { method: 'DELETE' })).json();
+        renderConfigStatus(data);
+        if (data.ok === false) {
+          msg.className = 'modal-msg err';
+          msg.textContent = data.error || 'Could not clear credentials.';
+          return;
+        }
         document.getElementById('cfg-id').value = '';
         document.getElementById('cfg-secret').value = '';
-        renderConfigStatus(data);
         msg.className = 'modal-msg';
         msg.textContent = 'Cleared — back to keyless (anonymous).';
       } catch (e) {
@@ -2520,7 +3489,31 @@
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       toggleControls(false);
+      toggleFilters(false);
+      closeSettings();
+      stopCentred();
       if (document.body.classList.contains('wall-mode')) toggleWall(false);
+    });
+
+    // Single-key shortcuts, listed in ⚙. Never while typing, in wall mode, or
+    // with a dialog open.
+    const VIEW_ORDER = ['cards', 'table', 'map'];
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
+      if (document.body.classList.contains('wall-mode')) return;
+      if (document.querySelector('.modal-overlay.show, .overhead.show')) return;
+      const key = e.key.toLowerCase();
+      if (key === '/') {
+        e.preventDefault();
+        document.getElementById('search').focus();
+      } else if (key === 'v') {
+        setView(VIEW_ORDER[(VIEW_ORDER.indexOf(view) + 1) % VIEW_ORDER.length]);
+      } else if (key === 'l') {
+        toggleMapLabels();
+      } else if (key === 'c' && view === 'map' && (centredIcao || selectedIcao)) {
+        toggleCentred(centredIcao || selectedIcao);
+      }
     });
 
     // Keep --header-h in sync so the map fills exactly the space below the header.

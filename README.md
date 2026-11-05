@@ -2,14 +2,19 @@
 
 A zero-cost local web dashboard that shows nearby flights in real time. Runs on your machine via a Python/Flask server — no paid subscriptions required.
 
-**[Try the demo](https://dilshanonline.github.io/OpenFlightWall/demo/)** · **[Project website](https://dilshanonline.github.io/OpenFlightWall/)** — the demo runs the real dashboard in your browser on recorded flights (no install, no server).
+**[Try the demo](https://dilshanonline.github.io/OpenFlightWall/demo/)** · **[Project website](https://dilshanonline.github.io/OpenFlightWall/)** — the demo runs the real dashboard in your browser on recorded aircraft positions with sample routes (no install, no server).
 
 **[Read the story](https://medium.com/@dilshanw/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31)** — how this project came to be, on Medium.
 
 ![OpenFlightWall Medium article cover](docs/screenshots/article-cover-1.png)
 
+The screenshots use the replay demo's sample callsigns and routes.
+
 **Card View:**
 ![Card View](docs/screenshots/card-view.png)
+
+**Table view:**
+![Table view](docs/screenshots/table-view.png)
 
 **Browser notification:**
 
@@ -34,22 +39,28 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 
 - **Card & Map views** — a responsive flight-card grid, or a live Leaflet/OpenStreetMap map with rotated plane icons; click anywhere on the map to move your location.
 - **Livelier map** — a dark basemap by default (switch back to the standard map from the layer button; your choice is remembered), planes that glide smoothly between updates instead of jumping, a short trail behind each plane, and popups that stay open across refreshes.
-- **Vector aircraft art** — the overhead alert, Closest-flight banner and wall mode draw the aircraft with the **airline logo on its tail**, the airline name along the fuselage, and the nose pointing the way it is flying. The shape follows the aircraft type: jumbos (747/A380), wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops, light aircraft and helicopters.
+- **Vector aircraft art** — the overhead alert, flight banner and wall mode draw the aircraft with the **airline logo on its tail**, the airline name along the fuselage, and the nose pointing the way it is flying. The shape follows the aircraft type: jumbos (747/A380), wide-bodies, narrow-bodies, rear-engine regional jets, business jets, turboprops, light aircraft and helicopters.
 - **Origin → destination routes** — full airport names + country flags, plus great-circle route arcs on the map.
 - **Flight progress + ETA** — progress bar with km flown / remaining and a rough "lands in ~1h 23m" estimate (computed locally).
 - **Aircraft photos & details** — photo, registration, manufacturer and owner from adsbdb.com.
 - **Airline logos** — carrier logo on cards, hero banner and map popups (Kiwi.com public CDN).
-- **Closest-flight hero banner** — spotlights the nearest aircraft with its vector art, route and progress (the LED-wall vibe).
+- **Most-overhead hero banner** — spotlights the plane you are most likely to notice (low and heading towards you) with its vector art, route and progress (the LED-wall vibe).
 - **"Overhead now" alert** — full-screen alert when a plane is within ~3 km overhead, with the aircraft art, route, progress and live stats. It **dismisses itself after 1 minute** by default, with a live "Dismiss in M:SS" countdown; pick 30s / 2 / 5 min, or **Stays open**, from the header.
 - **Wall mode** — a full-screen display for a TV, Raspberry Pi or spare monitor: a big clock, the nearest flights in turn with large aircraft art, and a scrolling ticker of everything else. It keeps the screen awake where the browser allows. Open it with the 🖥 button, or load `http://localhost:5050/?wall=1` (handy with a kiosk-mode browser); press Esc or ✕ to leave.
 - **Works on phones** — on narrow screens the header controls fold into a ☰ panel.
+- **Emergency and watchlist alerts** — a banner, sound and notification when a plane squawks 7500, 7600 or 7700, or matches your watchlist of callsigns, registrations, types or airlines
 - **New-version alert** — tells you when a newer release is out, with a link to what's new (in the browser, and in the console when you start the server). Turn it off with `OFW_UPDATE_CHECK=0`. See [Update notifications](#update-notifications).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
 - **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).
-- **Sort & filter** — sort by distance / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
+- **Readable map** — altitude colours with a legend, optional callsign labels, keep a plane centred, and an altitude chart in each popup.
+- **Keyboard shortcuts** — `/` search, `V` next view, `L` labels, `C` keep centred.
+- **Table view** — every flight in a sortable table; click one to open it on the map.
+- **Search and filters** — search by callsign, registration, type, airline, airport or squawk, and filter by aircraft category, altitude and airline.
+- **Flight phase and units** — climbing, cruising, on approach and so on, with a choice of aviation, metric or mixed units and km, miles or nautical miles (⚙ Settings).
+- **Sort** — sort by distance / most overhead / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
 - **Climb/descent + squawk** — ▲/▼ vertical-rate indicator and transponder squawk code.
 - **Browser geolocation** — centres on you automatically, with a manual lat/lon entry and click-to-set fallback (no config file).
-- **Save location** — optional **Save location** checkbox in the header remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.
+- **Save location** — optional **Save location** checkbox in ⚙ Settings remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.
 - **Adjustable radius** — change the search radius live from the header.
 - **OpenSky account, in-app** — add optional free OpenSky credentials from a ⚙ Settings panel for a higher rate limit (validated live; no restart).
 - **Free bucket first** — when a key is set, the app uses the free anonymous quota first and only switches to your account key once the free quota is exhausted (maximising your total daily requests).
@@ -133,7 +144,7 @@ Location and radius are set in the browser (no config file needed):
 
 | Setting | Where | Notes |
 |---|---|---|
-| Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in the header to reuse it next time |
+| Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in ⚙ Settings to reuse it next time |
 | Search radius | Radius input in the header (default **10 km**) | Change it live; flights re-fetch immediately |
 
 The only server-side settings are optional environment variables (or a `.env` file — see `.env.example`):
@@ -142,6 +153,8 @@ The only server-side settings are optional environment variables (or a `.env` fi
 |---|---|---|
 | `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET` | unset | Free OpenSky account for a higher rate limit (below) |
 | `OFW_UPDATE_CHECK` | `1` | Set to `0` to never ask GitHub whether a newer release exists |
+| `OFW_DATA_DIR` | next to `app.py` (`/data` in Docker) | Folder for credentials saved from ⚙ Settings |
+| `FLASK_DEBUG` | unset | Set to `1` for Flask's debugger and auto-reload, for development only |
 
 ### Update notifications
 
@@ -282,7 +295,7 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 - Use `http://localhost:5050` (not a LAN IP) — geolocation needs a secure context
 
 **Browser notifications not appearing**
-- A ⚠ next to the **Notify** dropdown names whichever layer is blocking — hover it
+- A ⚠ in the header, repeated beside **Browser notifications** in ⚙ Settings, names whichever layer is blocking — hover it
 - macOS: System Settings → **Notifications** → your browser must have *Allow Notifications* on and an alert style other than **None**; also turn off any **Focus / Do Not Disturb** mode
 - The browser can report success while the OS silently drops the banner — that is what the ⚠ detects
 - Re-allow notifications via the 🔒/ⓘ icon in the address bar if you previously blocked them
@@ -305,7 +318,7 @@ docker run -p 5050:5050 \
 ```
 
 - `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` are optional — omit them to run keyless.
-- Credentials can also be set at runtime from the ⚙ Settings panel in the UI instead of env vars — no restart needed. They're written to `opensky_creds.json` inside the container, so without a mounted volume they're lost if the container is removed; mount a volume over that path to persist them across restarts.
+- Credentials can also be set at runtime from the ⚙ Settings panel in the UI instead of env vars — no restart needed. They're written to `/data/opensky_creds.json` inside the container. To keep them when the container is replaced, add a named volume: `-v openflightwall-data:/data`.
 - The container listens on the `PORT` env var (default `5050`); set it if you need a different internal port, and adjust `-p` to match.
 - Tags: `latest` (newest release), plus semantic versions like `1.2.0`, `1.2`, `1` for pinning.
 - Runs behind [gunicorn](https://gunicorn.org/) in the image — the local `uv run python app.py` dev workflow above is unaffected and still uses Flask's own dev server.

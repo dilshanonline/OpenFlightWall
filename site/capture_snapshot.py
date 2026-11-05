@@ -1,5 +1,5 @@
 """
-Record a snapshot of real flights for the GitHub Pages replay demo.
+Record aircraft positions for the GitHub Pages replay demo.
 
 Start the dev server first (`uv run python app.py`), then:
 
@@ -7,6 +7,10 @@ Start the dev server first (`uv run python app.py`), then:
 
 Writes site/snapshot.json, which site/build.py embeds into the demo page.
 On-ground aircraft are dropped: they never move in the replay and only add weight.
+
+Routes and flight numbers are left out, so the published demo contains no adsbdb
+route data. To show routes, add hand-written samples afterwards: replace each
+callsign and flight_iata, then set origin, destination and the progress fields.
 """
 
 import argparse
@@ -17,6 +21,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 OUT = Path(__file__).with_name("snapshot.json")
+ROUTE_FIELDS = ("origin", "destination", "route_total_km", "travelled_km",
+                "remaining_km", "progress_pct", "eta_min")
+
+
+def strip_route(flight: dict) -> dict:
+    """Return the flight without adsbdb route data."""
+    return {**flight, **dict.fromkeys(ROUTE_FIELDS), "flight_iata": ""}
 
 
 def main() -> None:
@@ -34,7 +45,7 @@ def main() -> None:
     if not isinstance(flights, list):
         raise SystemExit(f"Unexpected response from /api/flights: {flights}")
 
-    airborne = [f for f in flights if not f.get("on_ground")]
+    airborne = [strip_route(f) for f in flights if not f.get("on_ground")]
     snapshot = {
         "captured_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "center": {"lat": args.lat, "lon": args.lon, "label": args.label},

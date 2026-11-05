@@ -2,10 +2,10 @@
  * OpenFlightWall replay demo (GitHub Pages).
  *
  * GitHub Pages cannot run the Flask backend, and OpenSky only accepts browser
- * requests from its own origin, so the demo replays a recorded snapshot of real
- * flights instead (site/snapshot.json, embedded by site/build.py). Airborne
- * planes keep flying along their heading at their ground speed, and the whole
- * replay loops every few minutes.
+ * requests from its own origin, so the demo replays recorded aircraft positions
+ * instead (site/snapshot.json, embedded by site/build.py). Callsigns and routes
+ * in that file are hand-written samples. Airborne planes keep flying along their
+ * heading at their ground speed, and the whole replay loops every few minutes.
  *
  * This file runs before the dashboard's own script and sets window.OFW_DEMO,
  * which templates/index.html checks in start() and loadFlights().
@@ -98,8 +98,8 @@
     el.className = 'demo-banner';
     el.innerHTML = `
       <button class="demo-close" title="Hide">✕</button>
-      <b>Demo</b> · replaying real flights recorded near ${snapshot.center.label} on ${captured}.
-      Planes keep flying along their headings; the replay loops every few minutes.
+      <b>Demo</b> · replaying aircraft positions recorded near ${snapshot.center.label} on ${captured}.
+      Callsigns and routes are samples. Planes keep flying along their headings; the replay loops every few minutes.
       <div class="demo-actions">
         <button data-act="overhead">Show overhead alert</button>
         <button data-act="wall">Try wall mode</button>

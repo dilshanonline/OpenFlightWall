@@ -7,7 +7,8 @@ Guidance for AI coding assistants (and human contributors) working on this repo:
 - **NEVER** suggest paid APIs or services (no FlightAware AeroAPI, no aviation data subscriptions).
 - **NEVER** add API keys or credentials to the codebase.
 - **All data sources must be free** (keyless preferred): OpenSky (optional free OAuth), hexdb.io, adsbdb.com, Kiwi.com logos, OpenStreetMap tiles, GitHub API (update check only).
-- There is no config file for location/radius — those live in the browser. The only optional server config is OpenSky OAuth via `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` and the update-check opt-out `OFW_UPDATE_CHECK=0` (env or `.env`).
+- There is no config file for location/radius — those live in the browser. The only optional server config is OpenSky OAuth via `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET`, the update-check opt-out `OFW_UPDATE_CHECK=0`, the credentials folder `OFW_DATA_DIR`, and `FLASK_DEBUG=1` for development (env or `.env`).
+- **Never publish adsbdb route data.** Its README says route data "may not be copied, published, or incorporated into other databases" without David J Taylor's permission. Showing it live is how the app works, but don't commit it, bundle it, or add features that redistribute it. `site/snapshot.json` uses hand-written sample routes for this reason.
 - Before adding a new data source, confirm it is free and requires no key. (Hosted dark map styles such as CARTO and Stadia now require a key, which is why the dark map recolours OSM tiles with CSS instead.)
 
 ## Project Layout
@@ -62,6 +63,14 @@ GitHub API         →  latest release / tags (update check only, cached 6 h, OF
 - `_cache` — full flight list, keyed by rounded (lat, lon, radius), `CACHE_TTL = 30` s. Protects the OpenSky rate limit (~1 req/10s).
 - `_route_cache` / `_aircraft_cache` — per-callsign / per-icao24, `ROUTE_CACHE_TTL = 3600` s.
 - `_type_cache` — hexdb.io type per icao24. Answers (including 404) use `ROUTE_CACHE_TTL`; failures use `TYPE_FAIL_TTL = 300` s.
+- `_prune_caches()` removes expired entries at most hourly (`CACHE_PRUNE_INTERVAL`), including stale `_cache` data older than `ROUTE_CACHE_TTL`.
+- `_fetch_lock_for(key)` makes concurrent `/api/flights` requests for one area share a single fetch. `_enrich_pool` caps enrichment at `ENRICH_WORKERS = 4` aircraft at a time across all requests.
+- All of this state, plus credentials and rate counters, lives in process memory, so the Docker image must stay at `--workers 1` (use threads to scale).
+
+## Route and position checks
+
+- `compute_progress()` sets `route_plausible: false` when going via the plane adds over 25% and over 100 km to the route. Progress fields are then `None`, and the UI shows "Route unverified" and draws no route line. Only `=== false` counts, since the demo and older data may omit it.
+- `fetch_state_vectors()` drops fixes older than `MAX_POSITION_AGE_S = 300` and exposes `position_age_s`; `renderMap()` uses it so the glide starts from when the position was measured.
 
 ## API Endpoints
 
@@ -126,6 +135,7 @@ Other backend facts:
 - `PORT` env var controls the bind port (default `5050`) — for hosts that inject their own port.
 - `.github/workflows/docker-publish.yml` builds and pushes multi-arch (`linux/amd64`+`linux/arm64`) images to Docker Hub (`dilshanonline/openflightwall`) on `v*.*.*` git tags only — pushing to `main` does **not** trigger a build. Its first step fails the run if the tag differs from `pyproject.toml`'s version; a second `release` job (after the image is pushed, `contents: write` scoped to that job) creates the GitHub Release with that version's `CHANGELOG.md` section as notes (`--prerelease` for tags containing `-`).
 - **Releasing**: see [Release Process](#release-process).
+- `OFW_DATA_DIR=/data` in the image: `/data` is owned by the `app` user and declared as a volume, because `/app` is not writable at runtime. `_save_creds()` returns whether the write worked, and `POST /api/config` reports it as `persisted`.
 - Local test build: `docker buildx build --load -t openflightwall:test .` then `docker run -p 5050:5050 openflightwall:test`.
 - If you add a new Python dependency needed at runtime, add it to `dependencies` (or the `server` extra in `[project.optional-dependencies]` if Docker-only) in `pyproject.toml`, then run `uv lock` to update `uv.lock` — the Docker build uses `uv sync --frozen`, so a stale lockfile will fail the build.
 - **Cloud hosting caveat**: OpenSky blocks connections from some cloud/datacenter IP ranges (a timeout, not a `429`; credentials don't help), which surfaces as a `500` from `/api/flights` — an upstream restriction, already caught and reported cleanly by the `except Exception` handler around `fetch_flights()` in `app.py`. Don't "fix" this by suppressing the error; a real fix would need a fallback data source. The public demo is the GitHub Pages replay demo (see below), not a hosted server.
@@ -169,7 +179,7 @@ Running apps notice the new release within about a day (server cache 6 h, browse
 - `site/index.html` — hand-written landing page (no framework). `site/demo.js` — replay engine + demo banner; sets `window.OFW_DEMO = {center, pollMs, flights(loc, radiusKm)}`, advancing airborne planes along their heading (6-minute loop) and recomputing distance/bearing. `site/snapshot.json` — the recording.
 - `site/build.py` (stdlib) writes `_site/` (git-ignored): copies the landing page and `docs/screenshots/`, and renders `templates/index.html` into `_site/demo/index.html` by replacing `{{ default_radius }}` and injecting the snapshot JSON + `demo.js` before the main `<script>`. It **fails loudly** if those anchors change. Preview with `python3 site/build.py --serve` (http://localhost:8000/); opening `site/index.html` directly shows no images and no demo, because those only exist in `_site/`.
 - **Demo hooks in `templates/index.html`** — `const DEMO = window.OFW_DEMO || null`; `POLL_MS` uses `DEMO.pollMs`; `start()` calls `startDemo()` (adds `body.demo`, sound/notifications off, no config/update/saved-location calls, `setLocation(DEMO.center…)`); `loadFlights()` takes `DEMO.flights(...)` instead of `/api/flights`. `body.demo` hides ⚙, Save location and the credits badge. When editing `start()`/`loadFlights()`, keep these branches working and rebuild the site to check the demo.
-- Refresh the recording: run the dev server, then `python3 site/capture_snapshot.py [--lat --lon --radius --label]` (keeps airborne flights only).
+- Refresh the recording: run the dev server, then `python3 site/capture_snapshot.py [--lat --lon --radius --label]` (keeps airborne flights only and strips routes and flight numbers). Add hand-written sample callsigns and routes afterwards, with airport details not taken from adsbdb, and keep the demo banner's "samples" wording. See Hard Constraints.
 - `.github/workflows/pages.yml` builds and deploys on pushes to `main` touching `site/**`, `templates/index.html` or `docs/screenshots/**` (plus manual dispatch). Requires Settings → Pages → Source: **GitHub Actions** (one-time).
 
 ## Running / Testing

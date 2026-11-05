@@ -27,6 +27,7 @@ import re
 import threading
 import time
 import tomllib
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import requests
@@ -78,7 +79,9 @@ _version_cache = {"latest": None, "url": None, "ts": 0.0, "ttl": 0}
 # OpenSky OAuth credentials (client_credentials flow). Keyless by default; can be
 # set via env vars, a .env file, or live from the UI (persisted to a local file).
 # Load precedence: local file (UI-saved) overrides env vars.
-CREDS_FILE = Path(__file__).parent / "opensky_creds.json"
+# OFW_DATA_DIR moves the file somewhere writable (the Docker image uses a volume).
+DATA_DIR = Path(os.getenv("OFW_DATA_DIR") or Path(__file__).parent)
+CREDS_FILE = DATA_DIR / "opensky_creds.json"
 _creds = {"client_id": "", "client_secret": "", "source": "none"}
 _opensky_token = {"access_token": "", "expiry": 0.0}
 
@@ -141,6 +144,26 @@ _route_cache: dict = {}
 _aircraft_cache: dict = {}
 _type_cache: dict = {}
 
+# Nothing else removes old entries, so sweep them out on long-running servers.
+CACHE_PRUNE_INTERVAL = 3600
+_last_prune = 0.0
+
+# Concurrent requests for the same area wait for one upstream fetch.
+_fetch_locks: dict = {}
+_fetch_locks_guard = threading.Lock()
+
+# Ignore positions OpenSky hasn't updated recently; they no longer show the plane.
+MAX_POSITION_AGE_S = 300
+
+# A route is implausible if going via the plane's position adds this much distance.
+ROUTE_MAX_DETOUR_RATIO = 1.25
+ROUTE_MIN_DETOUR_KM = 100
+
+# Shared across requests, so upstream free APIs never see more than this many
+# aircraft being looked up at once.
+ENRICH_WORKERS = 4
+_enrich_pool = ThreadPoolExecutor(max_workers=ENRICH_WORKERS, thread_name_prefix="enrich")
+
 
 class OpenSkyRateLimit(Exception):
     """Raised when OpenSky returns HTTP 429 (too many requests)."""
@@ -184,25 +207,39 @@ def _opensky_token_get() -> str:
     return token
 
 
-def _save_creds(client_id: str, client_secret: str) -> None:
-    """Persist UI-supplied creds to a local (git-ignored) file and reset the token."""
+def _save_creds(client_id: str, client_secret: str) -> bool:
+    """
+    Use UI-supplied creds now and persist them to a local (git-ignored) file.
+    Returns False if the file couldn't be written, so they won't survive a restart.
+    """
     _creds.update(client_id=client_id, client_secret=client_secret, source="ui")
     _opensky_token.update(access_token="", expiry=0.0)
     try:
-        CREDS_FILE.write_text(json.dumps({"client_id": client_id, "client_secret": client_secret}))
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        # Create it private from the start; the secret is never world-readable.
+        fd = os.open(CREDS_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            fh.write(json.dumps({"client_id": client_id, "client_secret": client_secret}))
         os.chmod(CREDS_FILE, 0o600)
-    except Exception:
-        pass
+        return True
+    except OSError:
+        return False
 
 
-def _clear_creds() -> None:
-    """Delete UI-saved creds and revert to env vars (or anonymous)."""
+def _clear_creds() -> bool:
+    """
+    Delete UI-saved creds and revert to env vars (or anonymous).
+    Returns False if the file couldn't be deleted, in which case the saved creds
+    are still in effect.
+    """
     _opensky_token.update(access_token="", expiry=0.0)
+    removed = True
     try:
         CREDS_FILE.unlink(missing_ok=True)
-    except Exception:
-        pass
+    except OSError:
+        removed = False
     _load_creds()
+    return removed
 
 
 def _masked_id() -> str:
@@ -292,7 +329,9 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
             "in Settings for a higher limit, or wait ~1 minute."
         )
     resp.raise_for_status()
-    states = resp.json().get("states") or []
+    payload = resp.json()
+    states = payload.get("states") or []
+    data_time = payload.get("time") or time.time()
 
     result = []
     for s in states:
@@ -301,6 +340,9 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
         lat = s[6]
         lon = s[5]
         if lat is None or lon is None:
+            continue
+        position_age = max(0, round(data_time - s[3])) if s[3] else None
+        if position_age is not None and position_age > MAX_POSITION_AGE_S:
             continue
         dist = haversine_km(center_lat, center_lon, lat, lon)
         if dist > radius_km:
@@ -317,6 +359,7 @@ def fetch_state_vectors(center_lat: float, center_lon: float, radius_km: float) 
             "heading_deg": s[10],
             "vertical_rate": s[11],
             "squawk": s[14] or "",
+            "position_age_s": position_age,
             "distance_km": round(dist, 1),
             "bearing_deg": round(bearing_deg(center_lat, center_lon, lat, lon), 1),
         })
@@ -479,12 +522,17 @@ def compute_progress(origin, destination, lat, lon, speed_kmh) -> dict:
     """
     Derive flight progress from route endpoints, current position and speed.
     All values are approximate (great-circle, constant speed). Returns keys:
-    route_total_km, travelled_km, remaining_km, progress_pct, eta_min.
+    route_total_km, travelled_km, remaining_km, progress_pct, eta_min, route_plausible.
     Any value that can't be computed is None.
+
+    Callsign-based routes are sometimes simply wrong (a callsign reused for another
+    flight). If the plane is far off the line between the two airports, the route
+    is marked implausible and no progress or ETA is reported from it.
     """
     out = {
         "route_total_km": None, "travelled_km": None,
         "remaining_km": None, "progress_pct": None, "eta_min": None,
+        "route_plausible": True,
     }
     has_o = origin and origin.get("lat") is not None
     has_d = destination and destination.get("lat") is not None
@@ -496,6 +544,10 @@ def compute_progress(origin, destination, lat, lon, speed_kmh) -> dict:
         out["route_total_km"] = round(haversine_km(
             origin["lat"], origin["lon"], destination["lat"], destination["lon"]), 1)
         denom = out["travelled_km"] + out["remaining_km"]
+        detour = denom - out["route_total_km"]
+        if denom > out["route_total_km"] * ROUTE_MAX_DETOUR_RATIO and detour > ROUTE_MIN_DETOUR_KM:
+            out.update(route_plausible=False, travelled_km=None, remaining_km=None)
+            return out
         if denom > 0:
             out["progress_pct"] = max(0, min(100, round(out["travelled_km"] / denom * 100)))
     if out["remaining_km"] is not None and speed_kmh and speed_kmh > 50:
@@ -503,55 +555,81 @@ def compute_progress(origin, destination, lat, lon, speed_kmh) -> dict:
     return out
 
 
+def _enrich_flight(sv: dict) -> dict:
+    """Add type, route, aircraft details, display units and progress to one state vector."""
+    aircraft_code = get_aircraft_type(sv["icao24"])
+    airline_icao = extract_airline_icao(sv["callsign"])
+    route = get_route(sv["callsign"])
+    details = get_aircraft_details(sv["icao24"])
+    # Fall back to adsbdb's type code if hexdb has none.
+    if not aircraft_code:
+        aircraft_code = details["type_code"]
+
+    alt_m = sv["altitude_m"]
+    vel_ms = sv["velocity_ms"]
+    speed_kmh = round(vel_ms * 3.6) if vel_ms is not None else None
+
+    progress = compute_progress(
+        route["origin"], route["destination"], sv["lat"], sv["lon"], speed_kmh)
+
+    return {
+        **sv,
+        "airline_icao": airline_icao,
+        "airline_name": route["airline_name"],
+        "airline_callsign": route["airline_callsign"],
+        "airline_iata": route["airline_iata"],
+        "aircraft_code": aircraft_code,
+        "flight_iata": route["flight_iata"],
+        "origin": route["origin"],
+        "destination": route["destination"],
+        # Aircraft metadata (adsbdb)
+        "registration": details["registration"],
+        "manufacturer": details["manufacturer"],
+        "owner": details["owner"],
+        "owner_country": details["owner_country"],
+        "photo": details["photo"],
+        "photo_thumb": details["photo_thumb"],
+        # Unit conversions for the UI
+        "altitude_ft": round(alt_m * 3.28084) if alt_m is not None else None,
+        "speed_kts": round(vel_ms * 1.94384, 1) if vel_ms is not None else None,
+        "speed_kmh": speed_kmh,
+        # Computed flight progress
+        **progress,
+    }
+
+
 def fetch_flights(center_lat: float, center_lon: float, radius_km: float) -> list[dict]:
     """Run the full pipeline: state vectors → aircraft type → display names → progress."""
     vectors = fetch_state_vectors(center_lat, center_lon, radius_km)
-    flights = []
-    for sv in vectors:
-        # No callsign on the ground is often a vehicle; in the air it's still a plane.
-        if not sv["callsign"] and sv["on_ground"]:
-            continue
+    # No callsign on the ground is often a vehicle; in the air it's still a plane.
+    wanted = [sv for sv in vectors if sv["callsign"] or not sv["on_ground"]]
+    return list(_enrich_pool.map(_enrich_flight, wanted))
 
-        aircraft_code = get_aircraft_type(sv["icao24"])
-        airline_icao = extract_airline_icao(sv["callsign"])
-        route = get_route(sv["callsign"])
-        details = get_aircraft_details(sv["icao24"])
-        # Fall back to adsbdb's type code if hexdb has none.
-        if not aircraft_code:
-            aircraft_code = details["type_code"]
 
-        alt_m = sv["altitude_m"]
-        vel_ms = sv["velocity_ms"]
-        speed_kmh = round(vel_ms * 3.6) if vel_ms is not None else None
+def _fetch_lock_for(key: tuple) -> threading.Lock:
+    """Return the lock that makes concurrent requests for one area share a fetch."""
+    with _fetch_locks_guard:
+        return _fetch_locks.setdefault(key, threading.Lock())
 
-        progress = compute_progress(
-            route["origin"], route["destination"], sv["lat"], sv["lon"], speed_kmh)
 
-        flights.append({
-            **sv,
-            "airline_icao": airline_icao,
-            "airline_name": route["airline_name"],
-            "airline_callsign": route["airline_callsign"],
-            "airline_iata": route["airline_iata"],
-            "aircraft_code": aircraft_code,
-            "flight_iata": route["flight_iata"],
-            "origin": route["origin"],
-            "destination": route["destination"],
-            # Aircraft metadata (adsbdb)
-            "registration": details["registration"],
-            "manufacturer": details["manufacturer"],
-            "owner": details["owner"],
-            "owner_country": details["owner_country"],
-            "photo": details["photo"],
-            "photo_thumb": details["photo_thumb"],
-            # Unit conversions for the UI
-            "altitude_ft": round(alt_m * 3.28084) if alt_m is not None else None,
-            "speed_kts": round(vel_ms * 1.94384, 1) if vel_ms is not None else None,
-            "speed_kmh": speed_kmh,
-            # Computed flight progress
-            **progress,
-        })
-    return flights
+def _prune_caches(now: float) -> None:
+    """Drop expired entries, at most once per CACHE_PRUNE_INTERVAL."""
+    global _last_prune
+    if now - _last_prune < CACHE_PRUNE_INTERVAL:
+        return
+    _last_prune = now
+    # _cache keeps stale data for rate-limit fallback, but not beyond this.
+    for cache in (_cache, _route_cache, _aircraft_cache):
+        for key, entry in list(cache.items()):
+            if now - entry["ts"] >= ROUTE_CACHE_TTL:
+                cache.pop(key, None)
+    for key, entry in list(_type_cache.items()):
+        if now - entry["ts"] >= entry["ttl"]:
+            _type_cache.pop(key, None)
+    with _fetch_locks_guard:
+        for key, lock in list(_fetch_locks.items()):
+            if not lock.locked():
+                del _fetch_locks[key]
 
 
 # ---------------------------------------------------------------------------
@@ -631,22 +709,30 @@ def api_flights():
     # Cache keyed by rounded location so distinct clients don't collide.
     key = (round(lat, 3), round(lon, 3), round(radius, 1))
     now = time.time()
+    _prune_caches(now)
     cached = _cache.get(key)
     if cached is not None and (now - cached["ts"]) < CACHE_TTL:
         return jsonify(cached["data"])
-    try:
-        data = fetch_flights(lat, lon, radius)
-        _cache[key] = {"data": data, "ts": now}
-        return jsonify(data)
-    except OpenSkyRateLimit as exc:
-        # Serve slightly stale data if we have any; otherwise report the limit.
-        if cached is not None:
+
+    with _fetch_lock_for(key):
+        # Another request may have filled the cache while this one waited.
+        now = time.time()
+        cached = _cache.get(key)
+        if cached is not None and (now - cached["ts"]) < CACHE_TTL:
             return jsonify(cached["data"])
-        return jsonify({"error": str(exc), "rate_limited": True}), 429
-    except Exception as exc:
-        if cached is not None:
-            return jsonify(cached["data"])   # fall back to stale data on any error
-        return jsonify({"error": str(exc)}), 500
+        try:
+            data = fetch_flights(lat, lon, radius)
+            _cache[key] = {"data": data, "ts": now}
+            return jsonify(data)
+        except OpenSkyRateLimit as exc:
+            # Serve slightly stale data if we have any; otherwise report the limit.
+            if cached is not None:
+                return jsonify(cached["data"])
+            return jsonify({"error": str(exc), "rate_limited": True}), 429
+        except Exception as exc:
+            if cached is not None:
+                return jsonify(cached["data"])   # fall back to stale data on any error
+            return jsonify({"error": str(exc)}), 500
 
 
 @app.route("/")
@@ -687,16 +773,20 @@ def set_config():
     token, _ = _opensky_fetch_token(cid, csec)
     if not token:
         return jsonify({"ok": False, "error": "OpenSky rejected these credentials."}), 400
-    _save_creds(cid, csec)
-    return jsonify({"ok": True, "configured": True, "client_id_masked": _masked_id(), "source": "ui"})
+    persisted = _save_creds(cid, csec)
+    return jsonify({
+        "ok": True, "configured": True, "client_id_masked": _masked_id(), "source": "ui",
+        "persisted": persisted,
+    })
 
 
 @app.route("/api/config", methods=["DELETE"])
 def delete_config():
     """Clear UI-saved credentials (revert to env vars or anonymous)."""
-    _clear_creds()
+    removed = _clear_creds()
     return jsonify({
-        "ok": True,
+        "ok": removed,
+        "error": None if removed else "Could not delete the saved credentials file.",
         "configured": bool(_creds["client_id"] and _creds["client_secret"]),
         "client_id_masked": _masked_id(),
         "source": _creds["source"],
@@ -707,14 +797,16 @@ if __name__ == "__main__":
     mode = "authenticated (OAuth)" if (_creds["client_id"] and _creds["client_secret"]) else "anonymous"
     print(f"OpenSky access: {mode}")
 
-    # Announce a newer release in the console without delaying startup. Only in
-    # the reloader's child process, so the line is not printed twice.
+    # Announce a newer release in the console without delaying startup. With the
+    # debug reloader, only in its child process so the line is not printed twice.
     def _announce_update():
         info = version_info()
         if info["update_available"]:
             print(f"\n  ✨ New version v{info['latest']} available "
                   f"(running v{info['current']}) — {info['url']}\n", flush=True)
 
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" and update_check_enabled():
+    # Flask's debugger can run code from the browser, so it is opt-in (FLASK_DEBUG=1).
+    debug = os.environ.get("FLASK_DEBUG") == "1"
+    if (not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true") and update_check_enabled():
         threading.Thread(target=_announce_update, daemon=True).start()
-    app.run(debug=True, port=5050)
+    app.run(debug=debug, port=5050)

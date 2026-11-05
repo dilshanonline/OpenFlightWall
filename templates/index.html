@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenFlightWall</title>
+  <meta name="description" content="A free, open-source dashboard showing the planes flying near you: flight cards, a live map and a wall display.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✈️%3C/text%3E%3C/svg%3E">
 
   <!-- Leaflet (free, OpenStreetMap) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -284,7 +286,16 @@
       height: 130px;
       background: #0d1117 center/cover no-repeat;
       border-bottom: 1px solid #30363d;
+      position: relative;
     }
+    .photo-credit { font-size: 0.65rem; color: #8b949e; text-decoration: none; }
+    .photo-credit:hover { text-decoration: underline; }
+    .card-photo .photo-credit {
+      position: absolute; right: 0.3rem; bottom: 0.3rem;
+      padding: 0.05rem 0.35rem; border-radius: 4px;
+      background: #000a; color: #e6edf3;
+    }
+    .route-note { color: #f0883e; font-size: 0.72rem; text-align: center; margin-top: 0.3rem; }
 
     /* ── Registration & climb/descent ── */
     .reg {
@@ -947,6 +958,9 @@
 
     /* ────────────── Card rendering ────────────── */
 
+    // adsbdb's aircraft photos come from airport-data.com.
+    const PHOTO_CREDIT = '<a class="photo-credit" href="https://www.airport-data.com/" target="_blank" rel="noopener">Photo: airport-data.com</a>';
+
     function renderRoute(f) {
       if (!f.origin && !f.destination) {
         return `<div class="route unknown">Route unavailable</div>`;
@@ -962,7 +976,10 @@
           ${airport(f.origin)}
           <span class="route-arrow">✈</span>
           ${airport(f.destination)}
-        </div>`;
+        </div>
+        ${f.route_plausible === false
+          ? '<div class="route-note" title="This plane is far from the line between these airports, so the listed route may be wrong.">Route unverified</div>'
+          : ''}`;
     }
 
     // Climbing / descending / level indicator from vertical rate (m/s).
@@ -1020,7 +1037,7 @@
         : '<span class="na">N/A</span>';
       const photo = f.photo_thumb || f.photo;
       const photoHtml = photo
-        ? `<div class="card-photo" style="background-image: url('${encodeURI(photo)}')"></div>` : '';
+        ? `<div class="card-photo" style="background-image: url('${encodeURI(photo)}')">${PHOTO_CREDIT}</div>` : '';
       const regHtml = f.registration ? `<span class="reg">${esc(f.registration)}</span>` : '';
       const logoHtml = f.airline_iata
         ? `<img class="airline-logo" src="${logoUrl(f.airline_iata)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
@@ -1254,13 +1271,17 @@
       const regText = f.registration ? ` · ${f.registration}` : '';
       const oCode = (f.origin && (f.origin.iata || f.origin.icao)) || '???';
       const dCode = (f.destination && (f.destination.iata || f.destination.icao)) || '???';
-      const routeText = (f.origin || f.destination) ? `${oCode} ✈ ${dCode}` : 'Route unavailable';
+      const routeText = (f.origin || f.destination)
+        ? `${oCode} ✈ ${dCode}${f.route_plausible === false ? ' (route unverified)' : ''}`
+        : 'Route unavailable';
       const speedText = f.speed_kts != null ? `${Math.round(f.speed_kts)} kts (${f.speed_kmh} km/h)` : 'N/A';
       const progText = f.progress_pct != null
         ? `<br>${f.progress_pct}% flown${f.eta_min != null ? ` · ~${fmtDuration(f.eta_min)} to go` : ''}`
         : '';
       const photo = f.photo_thumb || f.photo;
-      const photoTag = photo ? `<img src="${encodeURI(photo)}" style="width:100%;border-radius:4px;margin-bottom:4px">` : '';
+      const photoTag = photo
+        ? `<img src="${encodeURI(photo)}" alt="Photo of this aircraft" style="width:100%;border-radius:4px"><div style="text-align:right;margin-bottom:4px">${PHOTO_CREDIT}</div>`
+        : '';
       const logoTag = f.airline_iata
         ? `<img src="${logoUrl(f.airline_iata)}" style="height:20px;width:auto;border-radius:3px;background:#fff;padding:1px 4px;vertical-align:middle;margin-right:4px" onerror="this.style.display='none'">`
         : '';
@@ -1308,6 +1329,7 @@
 
     function drawRoute(f) {
       routeLayer.clearLayers();
+      if (f.route_plausible === false) return;   // don't draw a line we doubt
       const segments = [];
       const pos = [f.lat, f.lon];
       if (f.origin && f.origin.lat != null) segments.push([[f.origin.lat, f.origin.lon], pos]);
@@ -1362,7 +1384,9 @@
           m.path.push([f.lat, f.lon]);
           if (m.path.length > TRAIL_POINTS) m.path.shift();
           m.from = m.shown.slice();
-          m.t0 = m.fixT = now;
+          m.t0 = now;
+          // Dead-reckon from when the position was really measured.
+          m.fixT = now - (f.position_age_s || 0) * 1000;
         }
         m.f = f;
         updatePlaneIcon(m);
@@ -2407,11 +2431,17 @@
         });
         const data = await res.json();
         if (data.ok) {
-          msg.className = 'modal-msg ok';
-          msg.textContent = 'Saved — now using your OpenSky account.';
           renderConfigStatus(data);
           loadFlights();   // refresh immediately with the higher limit
-          setTimeout(closeSettings, 900);
+          if (data.persisted === false) {
+            // Keep the dialog open: the user needs to read this.
+            msg.className = 'modal-msg err';
+            msg.textContent = 'Now using your OpenSky account, but it could not be saved to disk, so you will need to enter it again after a restart.';
+          } else {
+            msg.className = 'modal-msg ok';
+            msg.textContent = 'Saved — now using your OpenSky account.';
+            setTimeout(closeSettings, 900);
+          }
         } else {
           msg.className = 'modal-msg err';
           msg.textContent = data.error || 'Could not save credentials.';
@@ -2428,9 +2458,14 @@
       const msg = document.getElementById('cfg-msg');
       try {
         const data = await (await fetch('/api/config', { method: 'DELETE' })).json();
+        renderConfigStatus(data);
+        if (data.ok === false) {
+          msg.className = 'modal-msg err';
+          msg.textContent = data.error || 'Could not clear credentials.';
+          return;
+        }
         document.getElementById('cfg-id').value = '';
         document.getElementById('cfg-secret').value = '';
-        renderConfigStatus(data);
         msg.className = 'modal-msg';
         msg.textContent = 'Cleared — back to keyless (anonymous).';
       } catch (e) {

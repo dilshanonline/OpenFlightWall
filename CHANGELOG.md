@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Squawk codes now appear. The server was dropping them, so they never showed on cards or in the overhead alert.
 - Airborne aircraft that send no callsign are no longer hidden. They appear under their registration or ICAO code.
 - Aircraft type lookups are now cached, so each refresh makes far fewer calls to hexdb.io and is less affected when it is slow.
+- **Docker:** credentials saved in ⚙ Settings now reach every request and are written to `/data`. The image used to run two separate server processes, so a saved or cleared credential could apply to only one of them. Mount a volume at `/data` to keep credentials when the container is replaced. If they can't be saved, ⚙ Settings now says so instead of reporting success.
+- Routes that can't be right, such as a plane far off the line between its listed airports, now show **Route unverified**, with no progress bar, ETA or map line.
+- Positions OpenSky hasn't updated for over 5 minutes are ignored, and the map's smooth motion allows for how old each position is.
+- Long-running servers no longer keep old cached lookups forever.
+
+### Changed
+- The first load of an area is faster, because aircraft are looked up in parallel (up to 4 at a time). Several open tabs now share one data fetch.
+- `python app.py` no longer starts Flask's debugger or auto-reload. Set `FLASK_DEBUG=1` to turn them on for development.
+- Aircraft photos now credit airport-data.com, and the page has a favicon and a description.
+- The replay demo keeps its recorded aircraft positions but now uses sample callsigns and routes, because adsbdb's route data may not be republished without permission. The real app still shows live routes.
 
 ## [1.2.2] - 2026-10-26
 

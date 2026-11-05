@@ -2,7 +2,7 @@
 
 A zero-cost local web dashboard that shows nearby flights in real time. Runs on your machine via a Python/Flask server — no paid subscriptions required.
 
-**[Try the demo](https://dilshanonline.github.io/OpenFlightWall/demo/)** · **[Project website](https://dilshanonline.github.io/OpenFlightWall/)** — the demo runs the real dashboard in your browser on recorded flights (no install, no server).
+**[Try the demo](https://dilshanonline.github.io/OpenFlightWall/demo/)** · **[Project website](https://dilshanonline.github.io/OpenFlightWall/)** — the demo runs the real dashboard in your browser on recorded aircraft positions with sample routes (no install, no server).
 
 **[Read the story](https://medium.com/@dilshanw/openflightwall-how-i-turned-my-plane-watching-habit-into-a-free-flight-dashboard-3b72536adb31)** — how this project came to be, on Medium.
 
@@ -142,6 +142,8 @@ The only server-side settings are optional environment variables (or a `.env` fi
 |---|---|---|
 | `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET` | unset | Free OpenSky account for a higher rate limit (below) |
 | `OFW_UPDATE_CHECK` | `1` | Set to `0` to never ask GitHub whether a newer release exists |
+| `OFW_DATA_DIR` | next to `app.py` (`/data` in Docker) | Folder for credentials saved from ⚙ Settings |
+| `FLASK_DEBUG` | unset | Set to `1` for Flask's debugger and auto-reload, for development only |
 
 ### Update notifications
 
@@ -305,7 +307,7 @@ docker run -p 5050:5050 \
 ```
 
 - `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` are optional — omit them to run keyless.
-- Credentials can also be set at runtime from the ⚙ Settings panel in the UI instead of env vars — no restart needed. They're written to `opensky_creds.json` inside the container, so without a mounted volume they're lost if the container is removed; mount a volume over that path to persist them across restarts.
+- Credentials can also be set at runtime from the ⚙ Settings panel in the UI instead of env vars — no restart needed. They're written to `/data/opensky_creds.json` inside the container. To keep them when the container is replaced, add a named volume: `-v openflightwall-data:/data`.
 - The container listens on the `PORT` env var (default `5050`); set it if you need a different internal port, and adjust `-p` to match.
 - Tags: `latest` (newest release), plus semantic versions like `1.2.0`, `1.2`, `1` for pinning.
 - Runs behind [gunicorn](https://gunicorn.org/) in the image — the local `uv run python app.py` dev workflow above is unaffected and still uses Flask's own dev server.

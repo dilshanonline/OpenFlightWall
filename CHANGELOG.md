@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-11-05
+
 ### Added
 - **Emergency alerts.** A plane in your radius squawking 7500 (hijack), 7600 (radio failure) or 7700 (emergency) now triggers a banner, a distinct two-tone sound and a browser notification, with a red badge on its card and map marker. Each alert fires once per aircraft and stays listed until the plane leaves or you dismiss it.
 - **Table view**, next to Cards and Map: every flight in one sortable table. Click a column to sort, or a flight to open it on the map.

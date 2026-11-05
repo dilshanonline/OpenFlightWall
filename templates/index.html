@@ -462,7 +462,7 @@
     .flight-table .t-alert { color: #ff7b72; font-weight: 700; }
     @media (max-width: 600px) { .flight-table .t-hide-sm { display: none; } }
     /* Replay demo: hide what needs the real server or stores personal data. */
-    body.demo #settings-btn, body.demo label:has(#save-loc), body.demo #credits { display: none; }   /* only groups the buttons in the narrow panel */
+    body.demo #settings-btn, body.demo #credits { display: none; }   /* only groups the buttons in the narrow panel */
 
     .flag { font-size: 0.95em; }
 
@@ -751,6 +751,9 @@
     .plane-icon.emergency { color: #f85149; filter: drop-shadow(0 0 6px #f85149); }
     .modal { max-height: calc(100dvh - 2rem); overflow-y: auto; }
     .modal-section { border-top: 1px solid #30363d; margin-top: 1rem; padding-top: 1rem; }
+    .modal-section.first { border-top: 0; margin-top: 0; padding-top: 0.25rem; }
+    .modal-check { display: flex; align-items: flex-start; gap: 0.45rem; font-size: 0.78rem; color: #8b949e; cursor: pointer; }
+    .modal-warn { color: #d29922; margin: -0.35rem 0 0.75rem; }
     .modal-section-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.35rem; }
     .modal-field select {
       display: block; width: 100%; margin-top: 0.3rem; padding: 0.4rem 0.5rem; background: #0d1117;
@@ -796,9 +799,9 @@
     .empty code { background: #161b22; border-radius: 4px; padding: 0.1rem 0.4rem; font-size: 0.82rem; color: #8b949e; }
 
     /* ── Narrow screens: controls fold into a drop-down panel ── */
-    /* The status text needs a very wide screen; the dot and its tooltip stay. */
-    @media (max-width: 1950px) { #status-text { display: none; } }
-    @media (max-width: 1720px) {
+    /* The status text needs the most room; the dot and its tooltip stay. */
+    @media (max-width: 1470px) { #status-text { display: none; } }
+    @media (max-width: 1330px) {
       header { padding: 0.75rem 1rem; gap: 0.75rem; }
       .controls-btn { display: block; }
       .controls {
@@ -888,29 +891,10 @@
         </select>
       </label>
       <label><input id="hide-ground" type="checkbox" onchange="onHideGround(this.checked)"> Hide ground</label>
-      <label><input id="save-loc" type="checkbox" onchange="onSaveLocation(this.checked)"
-                    title="Remember this location in this browser and reuse it next time instead of re-detecting"> Save location</label>
-      <label>Notify
-        <select id="notify" onchange="onNotifyChange(this.value)" title="Browser notifications">
-          <option value="off">Off</option>
-          <option value="new">New flights</option>
-          <option value="overhead">Overhead only</option>
-          <option value="both" selected>Both</option>
-        </select>
-        <span id="notify-warn" class="notify-warn" hidden></span>
-      </label>
-      <label>Overhead alert
-        <select id="auto-dismiss" onchange="onAutoDismissChange(this.value)" title="Automatically dismiss the full-screen overhead alert after a set time">
-          <option value="0">Stays open</option>
-          <option value="30">Dismiss in 30s</option>
-          <option value="60" selected>Dismiss in 1 min</option>
-          <option value="120">Dismiss in 2 min</option>
-          <option value="300">Dismiss in 5 min</option>
-        </select>
-      </label>
       <div class="ctrl-row">
+        <span id="notify-warn" class="notify-warn" hidden></span>
         <button id="sound-btn" class="ctrl active" onclick="toggleSound()" title="Ping when a new flight enters your radius">🔔</button>
-        <button id="settings-btn" class="ctrl" onclick="openSettings()" title="OpenSky account (higher rate limit)">⚙</button>
+        <button id="settings-btn" class="ctrl" onclick="openSettings()" title="Settings">⚙</button>
         <button id="wall-btn" class="ctrl" onclick="toggleWall(true, true)" title="Wall mode — full-screen display for a TV or spare screen (also ?wall=1)">🖥</button>
       </div>
     </div>
@@ -1004,7 +988,34 @@
   <!-- OpenSky settings modal -->
   <div class="modal-overlay" id="settings-modal">
     <div class="modal">
-      <div class="modal-title">OpenSky account</div>
+      <div class="modal-title">Settings</div>
+      <div class="modal-section first">
+        <div class="modal-section-title">Alerts and location</div>
+        <label class="modal-field">Browser notifications
+          <select id="notify" onchange="onNotifyChange(this.value)">
+            <option value="off">Off</option>
+            <option value="new">New flights</option>
+            <option value="overhead">Overhead only</option>
+            <option value="both" selected>Both</option>
+          </select>
+        </label>
+        <div class="modal-note modal-warn" id="notify-warn-text" hidden></div>
+        <label class="modal-field">Overhead alert
+          <select id="auto-dismiss" onchange="onAutoDismissChange(this.value)">
+            <option value="0">Stays open</option>
+            <option value="30">Dismiss in 30s</option>
+            <option value="60" selected>Dismiss in 1 min</option>
+            <option value="120">Dismiss in 2 min</option>
+            <option value="300">Dismiss in 5 min</option>
+          </select>
+        </label>
+        <label class="modal-check">
+          <input id="save-loc" type="checkbox" onchange="onSaveLocation(this.checked)">
+          <span>Save location: remember it in this browser and reuse it next time</span>
+        </label>
+      </div>
+      <div class="modal-section">
+      <div class="modal-section-title">OpenSky account</div>
       <p class="modal-desc">
         The app is <b>keyless by default</b> but the anonymous rate limit is very low.
         Add a <b>free</b> <a href="https://opensky-network.org/" target="_blank" rel="noopener">OpenSky</a>
@@ -1021,10 +1032,11 @@
       <div class="modal-actions">
         <button class="ctrl" onclick="clearConfig()" id="cfg-clear">Clear</button>
         <span style="flex:1"></span>
-        <button class="ctrl" onclick="closeSettings()">Cancel</button>
+        <button class="ctrl" onclick="closeSettings()">Close</button>
         <button class="ctrl primary" onclick="saveConfig()" id="cfg-save">Save &amp; validate</button>
       </div>
       <div class="modal-note">Stored locally in plain text (git-ignored). Never leaves your machine.</div>
+      </div>
       <div class="modal-section">
         <div class="modal-section-title">Units</div>
         <label class="modal-field">Altitude and speed
@@ -2241,7 +2253,11 @@
 
     // Show (or clear, when passed null) the warning marker beside the dropdown.
     function setNotifyWarn(msg) {
+      // The ⚠ stays in the header so a problem is seen without opening Settings.
       const el = document.getElementById('notify-warn');
+      const text = document.getElementById('notify-warn-text');
+      text.hidden = !msg;
+      text.textContent = msg ? `⚠ ${msg}` : '';
       if (!msg) { el.hidden = true; el.textContent = ''; el.title = ''; return; }
       el.hidden = false;
       el.textContent = '⚠';
@@ -3473,6 +3489,7 @@
       if (e.key !== 'Escape') return;
       toggleControls(false);
       toggleFilters(false);
+      closeSettings();
       stopCentred();
       if (document.body.classList.contains('wall-mode')) toggleWall(false);
     });

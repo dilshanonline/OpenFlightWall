@@ -55,7 +55,7 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 - **Sort** — sort by distance / most overhead / altitude / airline, and a hide-on-ground toggle (labelled header controls). The **Hide ground** toggle is remembered across reloads.
 - **Climb/descent + squawk** — ▲/▼ vertical-rate indicator and transponder squawk code.
 - **Browser geolocation** — centres on you automatically, with a manual lat/lon entry and click-to-set fallback (no config file).
-- **Save location** — optional **Save location** checkbox in the header remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.
+- **Save location** — optional **Save location** checkbox in ⚙ Settings remembers your location in this browser and reuses it on the next visit, so a manually entered lat/lon does not have to be re-typed after every reload. Off by default; unticking it deletes the stored coordinates. Stored locally only — never sent to the server.
 - **Adjustable radius** — change the search radius live from the header.
 - **OpenSky account, in-app** — add optional free OpenSky credentials from a ⚙ Settings panel for a higher rate limit (validated live; no restart).
 - **Free bucket first** — when a key is set, the app uses the free anonymous quota first and only switches to your account key once the free quota is exhausted (maximising your total daily requests).
@@ -139,7 +139,7 @@ Location and radius are set in the browser (no config file needed):
 
 | Setting | Where | Notes |
 |---|---|---|
-| Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in the header to reuse it next time |
+| Location | Browser geolocation, manual lat/lon entry, or map click | Detected automatically on first load; tick **Save location** in ⚙ Settings to reuse it next time |
 | Search radius | Radius input in the header (default **10 km**) | Change it live; flights re-fetch immediately |
 
 The only server-side settings are optional environment variables (or a `.env` file — see `.env.example`):
@@ -290,7 +290,7 @@ Routes and aircraft types are cached server-side for 1 hour (they rarely change)
 - Use `http://localhost:5050` (not a LAN IP) — geolocation needs a secure context
 
 **Browser notifications not appearing**
-- A ⚠ next to the **Notify** dropdown names whichever layer is blocking — hover it
+- A ⚠ in the header, repeated beside **Browser notifications** in ⚙ Settings, names whichever layer is blocking — hover it
 - macOS: System Settings → **Notifications** → your browser must have *Allow Notifications* on and an alert style other than **None**; also turn off any **Focus / Do Not Disturb** mode
 - The browser can report success while the OS silently drops the banner — that is what the ⚠ detects
 - Re-allow notifications via the 🔒/ⓘ icon in the address bar if you previously blocked them

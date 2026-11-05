@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - Map trails now build up in every view, and survive switching views or searching, instead of starting again each time.
 - The banner above the cards now features the **most overhead** plane rather than simply the closest, favouring planes that are low and heading towards you. Sort has a matching "Most overhead" option.
-- Below 1720 px wide the header controls now fold into the ☰ panel (it was 1320 px), to make room for the new controls. Search stays visible. The status text only shows on very wide screens; the status dot and its tooltip are always there.
+- **Notify, Overhead alert and Save location moved to ⚙ Settings**, which keeps the header on one line. A ⚠ still appears in the header if notifications are blocked. Search stays visible on every screen size. Below 1470 px the status text hides, leaving the status dot and its tooltip.
 - The first load of an area is faster, because aircraft are looked up in parallel (up to 4 at a time). Several open tabs now share one data fetch.
 - `python app.py` no longer starts Flask's debugger or auto-reload. Set `FLASK_DEBUG=1` to turn them on for development.
 - Aircraft photos now credit airport-data.com, and the page has a favicon and a description.

@@ -47,6 +47,8 @@ A zero-cost local web dashboard that shows nearby flights in real time. Runs on 
 - **New-version alert** — tells you when a newer release is out, with a link to what's new (in the browser, and in the console when you start the server). Turn it off with `OFW_UPDATE_CHECK=0`. See [Update notifications](#update-notifications).
 - **Sound ping** — chime when a new flight enters your radius (**on by default**; toggle in the header).
 - **Browser notifications** — desktop notifications for **new flights**, **overhead only**, or **both** (**defaults to Both**; prompts for permission on first load, change or disable in the header).
+- **Readable map** — altitude colours with a legend, optional callsign labels, keep a plane centred, and an altitude chart in each popup.
+- **Keyboard shortcuts** — `/` search, `V` next view, `L` labels, `C` keep centred.
 - **Table view** — every flight in a sortable table; click one to open it on the map.
 - **Search and filters** — search by callsign, registration, type, airline, airport or squawk, and filter by aircraft category, altitude and airline.
 - **Flight phase and units** — climbing, cruising, on approach and so on, with a choice of aviation, metric or mixed units and km, miles or nautical miles (⚙ Settings).

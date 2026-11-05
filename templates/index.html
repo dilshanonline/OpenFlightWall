@@ -164,7 +164,39 @@
       color: #58a6ff;
       text-shadow: 0 0 3px #000, 0 0 6px #000;
     }
-    .plane-icon.ground { color: #f0883e; }
+    .plane-icon.ground { color: #8b949e; }
+    .plane-label {
+      background: #0d1117d9; border: 1px solid #30363d; border-radius: 4px; box-shadow: none;
+      color: #e6edf3; font-size: 0.68rem; padding: 0 0.3rem;
+    }
+    .plane-label::before { display: none; }
+    .map-legend {
+      background: #0d1117e6; border: 1px solid #30363d; border-radius: 6px; padding: 0.35rem 0.5rem;
+      color: #c9d1d9; font-size: 0.68rem; line-height: 1.5;
+    }
+    .map-legend div { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+    .map-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .map-legend b { color: #8b949e; font-weight: 600; }
+    .map-btn.active { background: #1f6feb; color: #fff; }
+    .centred-chip {
+      display: flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.5rem; border-radius: 6px;
+      background: #1f6feb; color: #fff; font-size: 0.72rem;
+    }
+    .centred-chip[hidden] { display: none; }
+    .centred-chip button { background: none; border: 0; color: inherit; cursor: pointer; padding: 0; font-size: 0.8rem; }
+    .popup-btn {
+      margin-top: 0.4rem; padding: 0.2rem 0.55rem; border-radius: 6px; cursor: pointer;
+      background: #21262d; border: 1px solid #30363d; color: #e6edf3; font-size: 0.72rem;
+    }
+    .popup-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .alt-chart { margin-top: 0.4rem; }
+    .alt-chart svg { display: block; width: 100%; height: 44px; overflow: visible; }
+    .alt-chart-caption { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.68rem; color: #8b949e; }
+    .shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.6rem; font-size: 0.78rem; color: #8b949e; }
+    .shortcuts kbd {
+      justify-self: start; padding: 0 0.35rem; border: 1px solid #30363d; border-radius: 4px;
+      background: #0d1117; color: #e6edf3; font-family: inherit; font-size: 0.72rem;
+    }
 
     /* Leaflet "locate me" button */
     .locate-btn {
@@ -1026,6 +1058,15 @@
           This browser is blocking site data, so the watchlist will be forgotten when you close the page.
         </div>
       </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Keyboard shortcuts</div>
+        <div class="shortcuts">
+          <kbd>/</kbd><span>Search flights</span>
+          <kbd>V</kbd><span>Next view</span>
+          <kbd>L</kbd><span>Map labels on or off</span>
+          <kbd>C</kbd><span>Keep the selected plane centred on the map</span>
+        </div>
+      </div>
       <div class="modal-about">
         Built by <a href="https://dilshanwijesooriya.me/" target="_blank" rel="noopener">Dilshan Wijesooriya</a>
         (<a href="https://github.com/dilshanonline" target="_blank" rel="noopener">GitHub</a>)<br>
@@ -1581,6 +1622,7 @@
       setView('map', () => {
         const m = mapMarkers.get(icao);
         if (!m) return;
+        selectedIcao = icao;
         map.panTo(m.shown);
         m.marker.openPopup();
         drawRoute(m.f);
@@ -1691,6 +1733,48 @@
       });
       map.addControl(new LocateControl());
 
+      // Callsign labels on or off.
+      const LabelsControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd() {
+          const btn = L.DomUtil.create('button', 'locate-btn map-btn');
+          btn.id = 'labels-btn';
+          btn.textContent = 'Aa';
+          btn.title = 'Show callsign labels (L)';
+          L.DomEvent.on(btn, 'click', (e) => { L.DomEvent.stop(e); toggleMapLabels(); });
+          return btn;
+        },
+      });
+      map.addControl(new LabelsControl());
+
+      // Which plane the map is following, with a way to stop.
+      const CentredControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd() {
+          const chip = L.DomUtil.create('div', 'centred-chip');
+          chip.id = 'centred-chip';
+          chip.hidden = true;
+          L.DomEvent.disableClickPropagation(chip);
+          return chip;
+        },
+      });
+      map.addControl(new CentredControl());
+
+      const LegendControl = L.Control.extend({
+        options: { position: 'bottomright' },
+        onAdd() {
+          const box = L.DomUtil.create('div', 'map-legend');
+          box.id = 'map-legend';
+          L.DomEvent.disableClickPropagation(box);
+          return box;
+        },
+      });
+      map.addControl(new LegendControl());
+      syncMapControls();
+
+      // Dragging means the user wants to look elsewhere.
+      map.on('dragstart', stopCentred);
+
       // Click the map to set your location manually (fallback when GPS fails)
       map.on('click', (e) => setLocation(e.latlng.lat, e.latlng.lng));
 
@@ -1724,6 +1808,7 @@
         }).addTo(map);
       }
 
+      stopCentred();
       map.setView(latlng, 9);
     }
 
@@ -1734,14 +1819,47 @@
       return Math.round(Math.max(32, Math.min(64, 42 + (zoom - 9) * 3)));
     }
 
+    // ── Altitude colours ──
+    // Altitude is ordered, so it gets one hue from light (low, the planes you
+    // notice) to dark (high). Lightness stays readable with colour blindness, and
+    // red stays reserved for emergencies. Validated as an ordinal ramp on the dark map.
+    const ALTITUDE_BANDS = [
+      { below: 2000, color: '#f0f6ff' },
+      { below: 10000, color: '#c3daff' },
+      { below: 20000, color: '#94bcfb' },
+      { below: 30000, color: '#689cf0' },
+      { below: Infinity, color: '#4a7edb' },
+    ];
+    const NO_ALTITUDE_COLOR = '#8b949e';   // on the ground, or altitude unknown
+
+    function altitudeColor(f) {
+      if (f.on_ground || f.altitude_ft == null) return NO_ALTITUDE_COLOR;
+      return ALTITUDE_BANDS.find((b) => f.altitude_ft < b.below).color;
+    }
+
+    function legendHtml() {
+      const k = (ft) => `${Number((altNum(ft) / 1000).toFixed(1))}k`;
+      const row = (color, label) => `<div><i style="background:${color}"></i>${label}</div>`;
+      const b = ALTITUDE_BANDS;
+      return `<div><b>Altitude (${altUnit()})</b></div>`
+        + row(b[4].color, `Above ${k(30000)}`)
+        + row(b[3].color, `${k(20000)}–${k(30000)}`)
+        + row(b[2].color, `${k(10000)}–${k(20000)}`)
+        + row(b[1].color, `${k(2000)}–${k(10000)}`)
+        + row(b[0].color, `Below ${k(2000)}`)
+        + row(NO_ALTITUDE_COLOR, 'Ground or unknown')
+        + row('#f85149', 'Emergency');
+    }
+
     function planeIcon(f) {
       const heading = f.heading_deg || 0;
       const size = planeIconSize();
+      const color = isEmergency(f) ? '' : `color:${altitudeColor(f)};`;
       // The ✈ glyph points east (90°) unrotated, so subtract 90° to align it with the heading.
       return L.divIcon({
         className: '',
         html: `<div class="plane-icon ${f.on_ground ? 'ground' : ''} ${isEmergency(f) ? 'emergency' : ''}"
-                    style="transform: rotate(${heading - 90}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
+                    style="${color}transform: rotate(${heading - 90}deg); font-size:${size}px; line-height:${size}px;">✈</div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
@@ -1749,7 +1867,7 @@
 
     // Only swap the icon when something visible changed, so it does not flicker.
     function updatePlaneIcon(m, force = false) {
-      const key = `${m.f.heading_deg || 0}|${m.f.on_ground}|${isEmergency(m.f)}|${planeIconSize()}`;
+      const key = `${m.f.heading_deg || 0}|${altitudeColor(m.f)}|${isEmergency(m.f)}|${planeIconSize()}`;
       if (force || key !== m.iconKey) { m.marker.setIcon(planeIcon(m.f)); m.iconKey = key; }
     }
 
@@ -1781,7 +1899,47 @@
         ${esc(idText)}${esc(regText)} · ${esc(aircraftLabel)}<br>
         ${esc(routeText)}<br>
         ${naHtml(fmtAlt(f.altitude_ft))} · ${esc(speedText)} ${phaseChip(f)}${progText}
+        ${altitudeChartHtml(f.icao24)}
+        <button class="popup-btn ${centredIcao === f.icao24 ? 'active' : ''}" data-icao="${esc(f.icao24)}"
+                onclick="event.stopPropagation(); toggleCentred(this.dataset.icao)">${centredIcao === f.icao24 ? 'Stop centring' : 'Keep centred'}</button>
       `;
+    }
+
+    // Altitude over this session, from the shared position history. One series,
+    // so the caption names it and no legend is needed.
+    function altitudeChartHtml(icao) {
+      const pts = historyPoints(icao).filter((p) => p.alt != null);
+      if (pts.length < 2) return '';
+      const W = 220, H = 44, PAD = 5;
+      const alts = pts.map((p) => p.alt);
+      const min = Math.min(...alts), max = Math.max(...alts);
+      // At least 500 ft of range, so instrument noise on level flight stays flat.
+      const span = Math.max(max - min, 500);
+      const mid = (min + max) / 2;
+      const t0 = pts[0].t, tSpan = Math.max(pts[pts.length - 1].t - t0, 1);
+      const x = (p) => ((p.t - t0) / tSpan) * (W - PAD * 2) + PAD;
+      const y = (p) => H / 2 - ((p.alt - mid) / span) * (H - PAD * 2);
+      const coords = pts.map((p) => `${x(p).toFixed(1)},${y(p).toFixed(1)}`).join(' ');
+      const last = pts[pts.length - 1];
+      const now = Date.now();
+      const ago = (p) => {
+        const mins = Math.round((now - p.t) / 60000);
+        return mins < 1 ? 'just now' : `${mins} min ago`;
+      };
+      // Hover targets are larger than the visible line.
+      const hits = pts.map((p) => `<circle cx="${x(p).toFixed(1)}" cy="${y(p).toFixed(1)}" r="7" fill="transparent"><title>${esc(fmtAlt(p.alt))} · ${ago(p)}</title></circle>`).join('');
+      const minutes = Math.max(1, Math.round((last.t - t0) / 60000));
+      return `
+        <div class="alt-chart">
+          <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+               aria-label="Altitude over the last ${minutes} minutes, from ${esc(fmtAlt(min))} to ${esc(fmtAlt(max))}">
+            <polyline points="${coords}" fill="none" stroke="#58a6ff" stroke-width="2"
+                      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+            <circle cx="${x(last).toFixed(1)}" cy="${y(last).toFixed(1)}" r="4" fill="#58a6ff" stroke="#161b22" stroke-width="2"/>
+            ${hits}
+          </svg>
+          <div class="alt-chart-caption"><span>Altitude, last ${minutes} min</span><span>${esc(fmtAlt(min))} – ${esc(fmtAlt(max))}</span></div>
+        </div>`;
     }
 
     // Point `km` along `bearing` from lat/lon (inverse of haversine + bearing).
@@ -1846,10 +2004,108 @@
     // Plane markers persist across polls, keyed by icao24, so an open popup
     // survives a refresh and planes can glide between fixes (see glideFrame).
     const mapMarkers = new Map();   // icao24 → { f, marker, trail, path, shown, from, t0, fixT }
-    const TRAIL_POINTS = 12;        // recent real positions kept per aircraft
+    const TRAIL_POINTS = 12;        // recent real positions drawn as the trail
     const GLIDE_BLEND_MS = 1500;    // ease from the old track onto a new fix
     const GLIDE_MAX_S = 60;         // never dead-reckon further than this
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ── Shared position history ──
+    // Recorded on every poll whichever view is showing, so trails and charts
+    // survive view switches and filtering. A future radar view can reuse it.
+    const flightHistory = new Map();   // icao24 → { points: [{lat, lon, alt, t}], seen }
+    const HISTORY_POINTS = 120;        // about an hour at the 30 s poll
+    const HISTORY_FORGET_MS = 10 * 60_000;
+
+    function recordHistory() {
+      const now = Date.now();
+      latestFlights.forEach((f) => {
+        if (f.lat == null || f.lon == null) return;
+        let h = flightHistory.get(f.icao24);
+        if (!h) { h = { points: [], seen: now }; flightHistory.set(f.icao24, h); }
+        h.seen = now;
+        const last = h.points[h.points.length - 1];
+        if (last && last.lat === f.lat && last.lon === f.lon) return;   // the same fix again
+        h.points.push({ lat: f.lat, lon: f.lon, alt: f.altitude_ft, t: now });
+        if (h.points.length > HISTORY_POINTS) h.points.shift();
+      });
+      flightHistory.forEach((h, icao) => {
+        if (now - h.seen > HISTORY_FORGET_MS) flightHistory.delete(icao);
+      });
+    }
+
+    const historyPoints = (icao) => flightHistory.get(icao)?.points || [];
+
+    // ── Map labels ──
+    const LS_MAP_LABELS = 'ofw:mapLabels';
+    let mapLabels = false;
+
+    function updatePlaneLabel(m) {
+      if (!mapLabels) {
+        if (m.labelText) { m.marker.unbindTooltip(); m.labelText = null; }
+        return;
+      }
+      const text = displayId(m.f);
+      if (text === m.labelText) return;
+      if (m.labelText) m.marker.setTooltipContent(esc(text));
+      else m.marker.bindTooltip(esc(text), { permanent: true, direction: 'right', offset: [14, 0], className: 'plane-label', interactive: false });
+      m.labelText = text;
+    }
+
+    function toggleMapLabels() {
+      mapLabels = !mapLabels;
+      lsSet(LS_MAP_LABELS, mapLabels ? '1' : null);
+      syncMapControls();
+      mapMarkers.forEach(updatePlaneLabel);
+    }
+
+    function syncMapControls() {
+      const btn = document.getElementById('labels-btn');
+      if (btn) {
+        btn.classList.toggle('active', mapLabels);
+        btn.setAttribute('aria-pressed', String(mapLabels));
+      }
+      const legend = document.getElementById('map-legend');
+      if (legend) legend.innerHTML = legendHtml();
+      const chip = document.getElementById('centred-chip');
+      if (chip) {
+        const m = centredIcao && mapMarkers.get(centredIcao);
+        chip.hidden = !m;
+        chip.innerHTML = m
+          ? `Centred on ${esc(displayId(m.f))} <button onclick="event.stopPropagation(); stopCentred()" aria-label="Stop centring" title="Stop centring (Esc)">✕</button>`
+          : '';
+      }
+    }
+
+    // ── Keep a plane centred ── Only inside the radius. Following a flight
+    // anywhere is a separate roadmap item. Its buttons rebuild themselves, so they
+    // stop propagation: otherwise Leaflet can't tell the click came from a control,
+    // treats it as a map click, and moves the user's location.
+    let centredIcao = null;
+    let selectedIcao = null;   // last plane opened, the target of the C shortcut
+
+    function refreshPopup(icao) {
+      const m = icao && mapMarkers.get(icao);
+      if (m) m.marker.setPopupContent(planePopupHtml(m.f));
+    }
+
+    function toggleCentred(icao) {
+      if (centredIcao === icao) { stopCentred(); return; }
+      const previous = centredIcao;
+      centredIcao = icao;
+      const m = mapMarkers.get(icao);
+      if (m && map) map.panTo(m.shown, { animate: false });
+      syncMapControls();
+      refreshPopup(previous);
+      refreshPopup(icao);
+    }
+
+    function stopCentred() {
+      if (!centredIcao) return;
+      const previous = centredIcao;
+      centredIcao = null;
+      syncMapControls();
+      refreshPopup(previous);
+    }
 
     function renderMap() {
       if (!map) return;
@@ -1860,25 +2116,27 @@
         seen.add(f.icao24);
         let m = mapMarkers.get(f.icao24);
         if (!m) {
-          m = { f, path: [], shown: [f.lat, f.lon] };
+          m = { f, path: [], shown: [f.lat, f.lon], trailColor: null };
           m.marker = L.marker(m.shown, { icon: planeIcon(f) }).bindPopup('').addTo(planeLayer);
-          m.marker.on('click', () => drawRoute(m.f));
+          m.marker.on('click', () => { selectedIcao = m.f.icao24; drawRoute(m.f); });
           m.trail = L.polyline([], { color: '#58a6ff', weight: 2, opacity: 0.45, interactive: false })
             .addTo(trailLayer);
           mapMarkers.set(f.icao24, m);
         }
         if (!m.fixT || m.f.lat !== f.lat || m.f.lon !== f.lon) {
-          // A new real position: extend the trail and restart the blend from
-          // wherever the plane is currently drawn.
-          m.path.push([f.lat, f.lon]);
-          if (m.path.length > TRAIL_POINTS) m.path.shift();
+          // A new real position: restart the blend from wherever the plane is
+          // currently drawn.
           m.from = m.shown.slice();
           m.t0 = now;
           // Dead-reckon from when the position was really measured.
           m.fixT = now - (f.position_age_s || 0) * 1000;
         }
+        m.path = historyPoints(f.icao24).slice(-TRAIL_POINTS).map((p) => [p.lat, p.lon]);
         m.f = f;
         updatePlaneIcon(m);
+        updatePlaneLabel(m);
+        const color = altitudeColor(f);
+        if (color !== m.trailColor) { m.trail.setStyle({ color }); m.trailColor = color; }
         m.marker.setPopupContent(planePopupHtml(f));
       });
       for (const [icao, m] of mapMarkers) {
@@ -1886,9 +2144,13 @@
         planeLayer.removeLayer(m.marker);
         trailLayer.removeLayer(m.trail);
         mapMarkers.delete(icao);
+        if (icao === centredIcao) centredIcao = null;   // it left the list
       }
+      syncMapControls();
       if (reduceMotion) {
         mapMarkers.forEach((m) => placePlane(m, [m.f.lat, m.f.lon]));
+        const centred = mapMarkers.get(centredIcao);
+        if (centred) map.panTo(centred.shown, { animate: false });
       } else {
         startGlide();
       }
@@ -1922,6 +2184,7 @@
         const a = Math.min(1, (now - m.t0) / GLIDE_BLEND_MS);
         const e = a * (2 - a);   // ease-out
         placePlane(m, [m.from[0] + (target[0] - m.from[0]) * e, m.from[1] + (target[1] - m.from[1]) * e]);
+        if (m.f.icao24 === centredIcao) map.panTo(m.shown, { animate: false });
       });
     }
     document.addEventListener('visibilitychange', () => { if (!document.hidden && view === 'map') startGlide(); });
@@ -2760,6 +3023,7 @@
       try {
         if (DEMO) {
           latestFlights = DEMO.flights(userLocation, radiusKm);
+          recordHistory();
           checkNewFlights();
           checkSpecialAlerts();
           refreshUI();
@@ -2779,6 +3043,7 @@
         if (data.error) throw new Error(data.error);
 
         latestFlights = Array.isArray(data) ? data : [];
+        recordHistory();
         checkNewFlights();
         checkSpecialAlerts();
         refreshUI();
@@ -2921,6 +3186,7 @@
       initFilters();
       initUnits();
       initTableSort();
+      mapLabels = lsGet(LS_MAP_LABELS) === '1';
     }
 
     // Restore the Hide ground toggle. Unlike the location this needs no opt-in:
@@ -3207,7 +3473,29 @@
       if (e.key !== 'Escape') return;
       toggleControls(false);
       toggleFilters(false);
+      stopCentred();
       if (document.body.classList.contains('wall-mode')) toggleWall(false);
+    });
+
+    // Single-key shortcuts, listed in ⚙. Never while typing, in wall mode, or
+    // with a dialog open.
+    const VIEW_ORDER = ['cards', 'table', 'map'];
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
+      if (document.body.classList.contains('wall-mode')) return;
+      if (document.querySelector('.modal-overlay.show, .overhead.show')) return;
+      const key = e.key.toLowerCase();
+      if (key === '/') {
+        e.preventDefault();
+        document.getElementById('search').focus();
+      } else if (key === 'v') {
+        setView(VIEW_ORDER[(VIEW_ORDER.indexOf(view) + 1) % VIEW_ORDER.length]);
+      } else if (key === 'l') {
+        toggleMapLabels();
+      } else if (key === 'c' && view === 'map' && (centredIcao || selectedIcao)) {
+        toggleCentred(centredIcao || selectedIcao);
+      }
     });
 
     // Keep --header-h in sync so the map fills exactly the space below the header.

@@ -159,6 +159,10 @@ MAX_POSITION_AGE_S = 300
 ROUTE_MAX_DETOUR_RATIO = 1.25
 ROUTE_MIN_DETOUR_KM = 100
 
+# With more than this far to go, a speed below this says nothing about arrival time.
+ETA_FAR_KM = 300
+ETA_MIN_CRUISE_KMH = 400
+
 # Shared across requests, so upstream free APIs never see more than this many
 # aircraft being looked up at once.
 ENRICH_WORKERS = 4
@@ -550,8 +554,12 @@ def compute_progress(origin, destination, lat, lon, speed_kmh) -> dict:
             return out
         if denom > 0:
             out["progress_pct"] = max(0, min(100, round(out["travelled_km"] / denom * 100)))
+    # Speed only predicts arrival once a plane is near cruise or close to landing.
+    # A climbing airliner with a long way to go would otherwise show a silly ETA.
     if out["remaining_km"] is not None and speed_kmh and speed_kmh > 50:
-        out["eta_min"] = round(out["remaining_km"] / speed_kmh * 60)
+        too_slow_to_judge = out["remaining_km"] > ETA_FAR_KM and speed_kmh < ETA_MIN_CRUISE_KMH
+        if not too_slow_to_judge:
+            out["eta_min"] = round(out["remaining_km"] / speed_kmh * 60)
     return out
 
 

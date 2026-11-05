@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Routes that can't be right, such as a plane far off the line between its listed airports, now show **Route unverified**, with no progress bar, ETA or map line.
 - Positions OpenSky hasn't updated for over 5 minutes are ignored, and the map's smooth motion allows for how old each position is.
 - Long-running servers no longer keep old cached lookups forever.
+- Planes still climbing with a long way to go no longer show absurd arrival estimates such as "59h". The estimate appears once the plane is near cruising speed or close to landing, and long estimates no longer crowd the text under the progress bar.
+- On phones the header no longer wraps onto a third row; OpenSky credits show in ⚙ Settings there.
+- **Docker:** `docker stop` now shuts the server down straight away.
 
 ### Changed
 - Map trails now build up in every view, and survive switching views or searching, instead of starting again each time.

@@ -28,7 +28,7 @@
     "name": "Frankfurt Airport"
    },
    "distance_km": 14.4,
-   "eta_min": 139,
+   "eta_min": null,
    "flight_iata": "EW9001",
    "heading_deg": 269.26,
    "icao24": "3c5ee6",
@@ -450,7 +450,7 @@
     "name": "Singapore Changi Airport"
    },
    "distance_km": 10.2,
-   "eta_min": 3567,
+   "eta_min": null,
    "flight_iata": "VN9009",
    "heading_deg": 269.42,
    "icao24": "8880e1",
@@ -560,7 +560,7 @@
     "name": "Madrid Barajas Airport"
    },
    "distance_km": 18.0,
-   "eta_min": 202,
+   "eta_min": null,
    "flight_iata": "BA9011",
    "heading_deg": 182.59,
    "icao24": "406250",

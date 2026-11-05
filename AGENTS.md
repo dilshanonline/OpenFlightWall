@@ -22,7 +22,8 @@ OpenFlightWall/
 ├── .env.example        # Committed template for optional OpenSky OAuth creds
 ├── .env                # Local secrets — git-ignored, never committed (optional)
 └── templates/
-    └── index.html      # Single-file frontend (vanilla HTML/CSS/JS + Leaflet CDN)
+    ├── index.html      # Single-file frontend (vanilla HTML/CSS/JS + Leaflet CDN)
+    └── aircraft_names.js  # Type code → name table, included into index.html's script
 ```
 
 Location and radius are chosen in the browser and passed to `/api/flights` as query params. `.env` (git-ignored) optionally holds OpenSky OAuth credentials; `.env.example` is the committed template.
@@ -95,6 +96,7 @@ Other backend facts:
 
 - **Views**: `setView('cards'|'table'|'map', thenDo)`; map uses Leaflet + OpenStreetMap tiles. `thenDo` runs once the map has been resized.
 - **Position history**: `recordHistory()` runs on every poll in both `loadFlights` branches, into `flightHistory` (icao24 → `{points: [{lat, lon, alt, t}], seen}`, capped at `HISTORY_POINTS`, forgotten after `HISTORY_FORGET_MS`). Trails (`m.path`) and `altitudeChartHtml()` read it via `historyPoints()`, so they survive view switches and filtering. A radar view should reuse it.
+- **Aircraft names**: `AIRCRAFT_NAMES` in `templates/aircraft_names.js` is a hand-written table of ICAO type code → display name. `index.html` pulls it in with a Jinja `{% include %}`, so it is still one page with no extra request, and `site/build.py` inlines it the same way. `aircraftName(f)` falls back to the code, and `aircraftHtml(f, missing)` adds the code on hover. Display and search use the name; `aircraftClass()`, filters and `type:` watchlist entries keep using `aircraft_code`. Don't use the lookups' `Type` text, which is inconsistent (`A320 251NSL`).
 - **Altitude colours**: `altitudeColor(f)` uses `ALTITUDE_BANDS`, a one-hue ordinal ramp validated against the dark map. Don't add red (reserved for `isEmergency`) or unrelated hues: bands that differ only by hue fail colour-blindness checks. `legendHtml()` follows the units.
 - **Map labels**: `updatePlaneLabel(m)` / `toggleMapLabels()`, the Aa control, stored in `ofw:mapLabels`, off by default. Tooltip text goes through `esc()`.
 - **Keep centred**: `centredIcao`, `toggleCentred()`, `stopCentred()`. `glideFrame()` pans to the plane (`renderMap()` does in reduced motion). Stops on drag, Esc, ✕, `applyUserLocation()` or when the plane leaves the list. **Any button that rebuilds itself on click must call `event.stopPropagation()`**: once its element is detached, Leaflet treats the click as a map click, and that sets the user's location.
@@ -136,7 +138,7 @@ Other backend facts:
 1. Read the relevant file(s) before editing.
 2. Preserve the zero-cost constraint in all suggestions.
 3. Keep the cache mechanisms intact when modifying `fetch_flights()` or `get_route()`.
-4. For frontend changes, keep everything in `index.html` — no build step, no npm (Leaflet is loaded from CDN).
+4. For frontend changes, keep everything in `index.html` — no build step, no npm (Leaflet is loaded from CDN). The exception is large data tables such as `templates/aircraft_names.js`, which are included into the page.
 5. Test by running `uv run python app.py` and hitting `/api/flights?lat=..&lon=..&radius=..`.
 6. **Update `CHANGELOG.md`** for any user-facing change — add an entry under `## [Unreleased]` (create the section if it's missing), using the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categories (Added/Changed/Fixed/Removed/Security). When releasing, `[Unreleased]` gets renamed to the new version + date (see [Release Process](#release-process); the release workflow copies that section into the GitHub Release notes).
 
@@ -175,7 +177,7 @@ Releases follow [Semantic Versioning](https://semver.org/): **patch** (`1.2.1`) 
    Pushing to `main` alone builds nothing; the tag is what releases.
 7. **Watch the workflows** (Actions tab):
    - *Docker Publish* → version check → multi-arch image to Docker Hub (`X.Y.Z`, `X.Y`, `X`, `latest`) → **`release` job creates the GitHub Release** (tags containing `-`, e.g. `v2.0.0-beta.1`, become pre-releases).
-   - *GitHub Pages* redeploys the website/demo if `site/`, `templates/index.html` or `docs/screenshots/` changed in the merge.
+   - *GitHub Pages* redeploys the website/demo if `site/`, `templates/` or `docs/screenshots/` changed in the merge.
 8. **Verify.** The release appears at github.com/dilshanonline/OpenFlightWall/releases with the right notes; `docker pull dilshanonline/openflightwall:X.Y.Z` works; the website's version badge shows `vX.Y.Z`.
 
 **If something goes wrong:**
@@ -189,11 +191,11 @@ Running apps notice the new release within about a day (server cache 6 h, browse
 
 - Live at `https://dilshanonline.github.io/OpenFlightWall/` (landing page) and `/demo/` (replay demo). Pages can't run Flask, and OpenSky only sends CORS headers for its own origin, so the demo **replays a recorded snapshot** instead of fetching live data.
 - `site/index.html` — hand-written landing page (no framework). `site/demo.js` — replay engine + demo banner; sets `window.OFW_DEMO = {center, pollMs, flights(loc, radiusKm)}`, advancing airborne planes along their heading (6-minute loop) and recomputing distance/bearing. `site/snapshot.json` — the recording.
-- `site/build.py` (stdlib) writes `_site/` (git-ignored): copies the landing page and `docs/screenshots/`, and renders `templates/index.html` into `_site/demo/index.html` by replacing `{{ default_radius }}` and injecting the snapshot JSON + `demo.js` before the main `<script>`. It **fails loudly** if those anchors change. Preview with `python3 site/build.py --serve` (http://localhost:8000/); opening `site/index.html` directly shows no images and no demo, because those only exist in `_site/`.
+- `site/build.py` (stdlib) writes `_site/` (git-ignored): copies the landing page and `docs/screenshots/`, and renders `templates/index.html` into `_site/demo/index.html` by replacing `{{ default_radius }}`, inlining `aircraft_names.js` and injecting the snapshot JSON + `demo.js` before the main `<script>`. It **fails loudly** if those anchors change. Preview with `python3 site/build.py --serve` (http://localhost:8000/); opening `site/index.html` directly shows no images and no demo, because those only exist in `_site/`.
 - **Demo hooks in `templates/index.html`** — `const DEMO = window.OFW_DEMO || null`; `POLL_MS` uses `DEMO.pollMs`; `start()` calls `startDemo()` (adds `body.demo`, sound/notifications off, no config/update/saved-location calls, `setLocation(DEMO.center…)`); `loadFlights()` takes `DEMO.flights(...)` instead of `/api/flights`. `body.demo` hides ⚙ (so Notify, Overhead alert, Save location, units and the watchlist too) and the credits badge. When editing `start()`/`loadFlights()`, keep these branches working and rebuild the site to check the demo.
 - **Screenshots** in `docs/screenshots/` are taken from the demo page so they only show sample routes. `notification.png` (a real macOS notification) and the article covers predate this.
 - Refresh the recording: run the dev server, then `python3 site/capture_snapshot.py [--lat --lon --radius --label]` (keeps airborne flights only and strips routes and flight numbers). Add hand-written sample callsigns and routes afterwards, with airport details not taken from adsbdb, and keep the demo banner's "samples" wording. See Hard Constraints.
-- `.github/workflows/pages.yml` builds and deploys on pushes to `main` touching `site/**`, `templates/index.html` or `docs/screenshots/**` (plus manual dispatch). Requires Settings → Pages → Source: **GitHub Actions** (one-time).
+- `.github/workflows/pages.yml` builds and deploys on pushes to `main` touching `site/**`, `templates/**` or `docs/screenshots/**` (plus manual dispatch). Requires Settings → Pages → Source: **GitHub Actions** (one-time).
 
 ## Running / Testing
 

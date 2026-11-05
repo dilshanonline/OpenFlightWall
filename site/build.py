@@ -30,13 +30,15 @@ OUT = ROOT / "_site"
 # changes so these disappear, fail loudly rather than ship a broken demo.
 RADIUS_ANCHOR = "{{ default_radius }}"
 SCRIPT_ANCHOR = "\n  <script>\n"   # the dashboard's main inline script
+NAMES_ANCHOR = '{% include "aircraft_names.js" %}'   # Flask inlines this; so must the demo
 
 
 def build_demo(dest: Path) -> None:
     template = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
     snapshot = json.loads((SITE / "snapshot.json").read_text(encoding="utf-8"))
+    names = (ROOT / "templates" / "aircraft_names.js").read_text(encoding="utf-8")
 
-    for anchor in (RADIUS_ANCHOR, SCRIPT_ANCHOR):
+    for anchor in (RADIUS_ANCHOR, SCRIPT_ANCHOR, NAMES_ANCHOR):
         if template.count(anchor) != 1:
             raise SystemExit(f"build.py: expected exactly one {anchor!r} in templates/index.html "
                              f"(found {template.count(anchor)}); update the demo build anchors.")
@@ -47,6 +49,7 @@ def build_demo(dest: Path) -> None:
               f'\n  <script src="demo.js"></script>{SCRIPT_ANCHOR}')
     page = (template
             .replace(RADIUS_ANCHOR, str(snapshot["radius_km"]))
+            .replace(NAMES_ANCHOR, names)
             .replace(SCRIPT_ANCHOR, inject)
             .replace("<title>OpenFlightWall</title>", "<title>OpenFlightWall · Demo</title>"))
 

@@ -1137,6 +1137,19 @@
       return f.flight_iata ? `${id} · ${f.flight_iata}` : id;
     }
 
+    {% include "aircraft_names.js" %}
+
+    function aircraftName(f) {
+      return AIRCRAFT_NAMES[(f.aircraft_code || '').toUpperCase()] || f.aircraft_code || null;
+    }
+
+    // The name for display, with the code on hover (watchlists and filters use the code).
+    function aircraftHtml(f, missing) {
+      const name = aircraftName(f);
+      if (!name) return missing;
+      return name === f.aircraft_code ? esc(name) : `<span title="Type code ${esc(f.aircraft_code)}">${esc(name)}</span>`;
+    }
+
     // ── Units ── Everything displayed goes through these; the API stays in ft, kts and km.
     const LS_UNITS = 'ofw:units';
     const FT_PER_M = 3.28084, KM_PER_UNIT = { km: 1, mi: 1.609344, NM: 1.852 };
@@ -1303,7 +1316,7 @@
       if (!q) return true;
       const airport = (a) => (a ? [a.iata, a.icao, a.city] : []);
       return [
-        f.callsign, f.flight_iata, f.registration, f.aircraft_code, f.airline_name,
+        f.callsign, f.flight_iata, f.registration, f.aircraft_code, aircraftName(f), f.airline_name,
         f.airline_icao, f.airline_iata, f.icao24, f.squawk, ...airport(f.origin), ...airport(f.destination),
       ].some((v) => (v || '').toUpperCase().includes(q));
     }
@@ -1456,7 +1469,6 @@
 
     function renderCard(f) {
       const airlineName = f.airline_name || f.airline_icao || displayId(f);
-      const aircraftLabel = f.aircraft_name_short || f.aircraft_code || null;
       const bearingLabel = f.bearing_deg != null
         ? `${compassLabel(f.bearing_deg)} ${f.bearing_deg}°` : null;
       const idLine = esc(flightIdText(f)) +
@@ -1490,8 +1502,8 @@
             </div>
           </div>
 
-          <div class="aircraft ${aircraftLabel ? '' : 'unknown'}">
-            ${aircraftLabel ? esc(aircraftLabel) : 'Unknown aircraft'}${regHtml}${phaseChip(f)}
+          <div class="aircraft ${aircraftName(f) ? '' : 'unknown'}">
+            ${aircraftHtml(f, 'Unknown aircraft')}${regHtml}${phaseChip(f)}
           </div>
 
           ${renderRoute(f)}
@@ -1566,7 +1578,7 @@
       { key: 'airline', label: 'Airline', value: (f) => f.airline_name || f.airline_icao || null,
         html: (f) => (f.airline_iata ? `<img src="${logoUrl(f.airline_iata)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '')
           + dash(f.airline_name || f.airline_icao) },
-      { key: 'type', label: 'Type', value: (f) => f.aircraft_code || null, html: (f) => dash(f.aircraft_code) },
+      { key: 'type', label: 'Type', value: aircraftName, html: (f) => aircraftHtml(f, '—') },
       { key: 'reg', label: 'Reg', small: true, value: (f) => f.registration || null, html: (f) => dash(f.registration) },
       { key: 'route', label: 'Route', value: routeText, html: (f) => dash(routeText(f)) },
       { key: 'phase', label: 'Phase', value: flightPhase, html: phaseChip },
@@ -1667,7 +1679,7 @@
       }
 
       const airlineName = f.airline_name || f.airline_icao || displayId(f);
-      const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
+      const aircraftLabel = aircraftName(f) || 'Unknown aircraft';
       const idText = flightIdText(f);
       const heroLogoHtml = f.airline_iata
         ? `<img class="hero-logo" src="${logoUrl(f.airline_iata)}" alt="${esc(airlineName)}" loading="lazy" onerror="this.style.display='none'">`
@@ -1886,7 +1898,6 @@
 
     function planePopupHtml(f) {
       const airlineName = f.airline_name || f.airline_icao || displayId(f);
-      const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
       const idText = flightIdText(f);
       const regText = f.registration ? ` · ${f.registration}` : '';
       const oCode = (f.origin && (f.origin.iata || f.origin.icao)) || '???';
@@ -1909,7 +1920,7 @@
       return `
         ${photoTag}
         <b>${logoTag}${esc(airlineName)}</b> ${alertBadgesHtml(f)}<br>
-        ${esc(idText)}${esc(regText)} · ${esc(aircraftLabel)}<br>
+        ${esc(idText)}${esc(regText)} · ${aircraftHtml(f, 'Unknown aircraft')}<br>
         ${esc(routeText)}<br>
         ${naHtml(fmtAlt(f.altitude_ft))} · ${esc(speedText)} ${phaseChip(f)}${progText}
         ${altitudeChartHtml(f.icao24)}
@@ -2576,7 +2587,7 @@
     // overhead alert and wall mode, which style it via :is(.overhead, .wall).
     function flightDetailHtml(f) {
       const airlineName = f.airline_name || f.airline_icao || displayId(f);
-      const aircraftLabel = f.aircraft_name_short || f.aircraft_code || 'Unknown aircraft';
+      const aircraftLabel = aircraftName(f) || 'Unknown aircraft';
       const idText = flightIdText(f);
       const logoHtml = f.airline_iata
         ? `<img class="hero-logo" src="${logoUrl(f.airline_iata)}" alt="" onerror="this.style.display='none'">` : '';

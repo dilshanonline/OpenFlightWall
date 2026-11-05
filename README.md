@@ -222,7 +222,7 @@ All sources are **free**. Only OpenSky optionally uses a (free) account for a hi
 | Airline name | ICAO callsign prefix | Shown as-is (e.g. `UAL`) |
 | Airline logo | Kiwi.com CDN | Shown by IATA code; hidden if none exists |
 | Callsign + flight number | OpenSky + adsbdb.com | e.g. `ACA850 · AC850` (IATA flight number shown when known) |
-| Aircraft type | hexdb.io | ICAO type code (e.g. `B738`) |
+| Aircraft type | hexdb.io + built-in names | Full name for common types (e.g. `B738` shows as Boeing 737-800), otherwise the ICAO type code |
 | Origin → Destination | adsbdb.com | Airport codes + city + country flag; "Route unavailable" if unknown |
 | Flight progress + ETA | Computed | Progress bar, km flown/remaining, rough "lands in ~" estimate (great-circle, constant speed) |
 | Aircraft photo & registration | adsbdb.com | Photo banner + registration/owner/manufacturer where available |

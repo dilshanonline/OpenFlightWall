@@ -8,11 +8,9 @@ Start the dev server first (`uv run python app.py`), then:
 Writes site/snapshot.json, which site/build.py embeds into the demo page.
 On-ground aircraft are dropped: they never move in the replay and only add weight.
 
-Routes and flight numbers are removed. adsbdb's route data "may not be copied,
-published, or incorporated into other databases" without its owner's permission,
-and this file is published on GitHub Pages. To show routes in the demo, add
-hand-written samples afterwards: replace each callsign and flight_iata, then set
-origin, destination and the progress fields, using airport details from elsewhere.
+Routes and flight numbers are left out, so the published demo contains no adsbdb
+route data. To show routes, add hand-written samples afterwards: replace each
+callsign and flight_iata, then set origin, destination and the progress fields.
 """
 
 import argparse

@@ -8,7 +8,7 @@ Guidance for AI coding assistants (and human contributors) working on this repo:
 - **NEVER** add API keys or credentials to the codebase.
 - **All data sources must be free** (keyless preferred): OpenSky (optional free OAuth), hexdb.io, adsbdb.com, Kiwi.com logos, OpenStreetMap tiles, GitHub API (update check only).
 - There is no config file for location/radius — those live in the browser. The only optional server config is OpenSky OAuth via `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET`, the update-check opt-out `OFW_UPDATE_CHECK=0`, the credentials folder `OFW_DATA_DIR`, and `FLASK_DEBUG=1` for development (env or `.env`).
-- **Never publish adsbdb route data.** Its README says route data "may not be copied, published, or incorporated into other databases" without David J Taylor's permission. Showing it live is how the app works, but don't commit it, bundle it, or add features that redistribute it. `site/snapshot.json` uses hand-written sample routes for this reason.
+- **Don't commit or bundle adsbdb route data.** Showing routes live is how the app works, but keep recorded routes out of the repo and the website. `site/snapshot.json` uses hand-written samples.
 - Before adding a new data source, confirm it is free and requires no key. (Hosted dark map styles such as CARTO and Stadia now require a key, which is why the dark map recolours OSM tiles with CSS instead.)
 
 ## Project Layout

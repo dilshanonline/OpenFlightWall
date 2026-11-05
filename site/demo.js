@@ -4,9 +4,8 @@
  * GitHub Pages cannot run the Flask backend, and OpenSky only accepts browser
  * requests from its own origin, so the demo replays recorded aircraft positions
  * instead (site/snapshot.json, embedded by site/build.py). Callsigns and routes
- * in that file are hand-written samples, because adsbdb's route data may not be
- * republished without permission. Airborne planes keep flying along their heading
- * at their ground speed, and the whole replay loops every few minutes.
+ * in that file are hand-written samples. Airborne planes keep flying along their
+ * heading at their ground speed, and the whole replay loops every few minutes.
  *
  * This file runs before the dashboard's own script and sets window.OFW_DEMO,
  * which templates/index.html checks in start() and loadFlights().

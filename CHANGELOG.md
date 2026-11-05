@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The first load of an area is faster, because aircraft are looked up in parallel (up to 4 at a time). Several open tabs now share one data fetch.
 - `python app.py` no longer starts Flask's debugger or auto-reload. Set `FLASK_DEBUG=1` to turn them on for development.
 - Aircraft photos now credit airport-data.com, and the page has a favicon and a description.
-- The replay demo keeps its recorded aircraft positions but now uses sample callsigns and routes, because adsbdb's route data may not be republished without permission. The real app still shows live routes.
+- The replay demo keeps its recorded aircraft positions but now uses sample callsigns and routes. The real app still shows live routes.
 
 ## [1.2.2] - 2026-10-26
 
